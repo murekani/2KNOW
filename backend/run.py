@@ -1,19 +1,39 @@
 import uvicorn
 import os
-import sys
+from dotenv import load_dotenv
 
-# Add the current directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Load environment variables
+load_dotenv()
 
 if __name__ == "__main__":
-    # Get port from Railway environment variable or default to 8000
-    port = int(os.environ.get("PORT", 8000))
+    # Get host and port from environment variables (for Railway deployment)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8000))
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
     
-    # Run the FastAPI app
+    print("\n" + "="*60)
+    print("🚀 Starting 2KNOW Market Trend Predictor API")
+    print("="*60)
+    print(f"📁 Database: {os.getenv('DATABASE_URL', 'sqlite:///./2know.db')}")
+    print(f"🌐 Server running at: {host}:{port}")
+    print(f"📚 API Docs: http://{host if host == 'localhost' else 'your-domain'}:{port}/docs")
+    print(f"⚙️  Environment: {'PRODUCTION (Railway)' if is_production else 'DEVELOPMENT'}")
+    print("\n📋 Available endpoints:")
+    print("  GET  /                    - Welcome message")
+    print("  GET  /health              - Health check")
+    print("  POST /auth/register       - Register user")
+    print("  POST /auth/login          - Login user")
+    print("  GET  /auth/profile        - User profile")
+    print("  GET  /trends/{keyword}    - Public trends")
+    print("  GET  /api/trends/{keyword}- Protected trends")
+    print("\n🔑 Required in .env:")
+    print("  JWT_SECRET_KEY, SERPER_API_KEY, DATABASE_URL, ALLOWED_ORIGINS")
+    print("="*60 + "\n")
+    
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",  # Important for Railway - binds to all network interfaces
+        host=host,
         port=port,
-        reload=False,  # Set to False for production
+        reload=False if is_production else True,
         log_level="info"
     )

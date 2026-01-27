@@ -1,32 +1,29 @@
 /**
- * API Configuration for Railway Deployment
- * Use relative URLs since frontend and backend are served from same origin
+ * API Configuration
+ * Dynamically sets API URL based on environment (local vs production)
  */
 
-// For Railway deployment - use relative URLs
-const API_CONFIG = {
-  // Empty string means relative to current origin
-  API_BASE_URL: '',
-  
-  // Endpoints - these will be appended to API_BASE_URL
-  endpoints: {
-    login: '/auth/login',
-    register: '/auth/register',
-    profile: '/auth/profile',
-    trends: '/api/trends',
-    publicTrends: '/trends',
-    health: '/health',
-    logout: '/auth/logout'
-  }
-};
+// Detect environment and return correct API URL
+function getApiUrl() {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
 
-// Helper function to get full API URL
-function getApiUrl(endpoint) {
-  // Remove leading slash if present in endpoint
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  // Return full URL
-  return `${API_CONFIG.API_BASE_URL}/${cleanEndpoint}`;
+    // Production: deployed backend (Railway)
+    // If NOT localhost or 127.0.0.1, assume Railway deployment
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        // Use your deployed backend URL here (Railway)
+        return 'https://web-production-c80fe.up.railway.app';
+    }
+
+    // Local development
+    return 'http://127.0.0.1:8000';
 }
+
+// Export API URL constant
+const API_URL = getApiUrl();
+
+// Debug log
+console.log(`🔌 API Configuration loaded: ${API_URL}`);
 
 // For debugging
 console.log('🔌 API Configuration Loaded:', {
