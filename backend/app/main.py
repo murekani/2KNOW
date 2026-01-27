@@ -48,11 +48,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "service": "2KNOW API", "timestamp": datetime.utcnow().isoformat()}
-
 # Mount static files for frontend CSS/JS/Assets
 static_path = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(static_path):
