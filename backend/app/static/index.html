@@ -598,7 +598,7 @@
                 // Success - redirect to dashboard
                 loadingText.textContent = 'Login successful! Redirecting...';
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = '/app';
                 }, 1000);
                 
             } catch (error) {
@@ -726,7 +726,7 @@
         
         // Check backend health
         function checkBackendHealth() {
-            fetch('http://127.0.0.1:8000/health')
+            fetch(`${API_URL}/health`)
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('apiStatus').innerHTML = 

@@ -310,12 +310,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Redirect logged-in users away from login page
     if (isAuthenticated() && (window.location.pathname.includes('index.html') || window.location.pathname === '/')) {
         console.log('🔄 Already logged in, redirecting to dashboard...');
-        window.location.href = 'dashboard.html';
+        window.location.href = '/app';
         return;
     }
 
     // Protect dashboard pages
-    if (window.location.pathname.includes('dashboard.html')) {
+    if (window.location.pathname.includes('/app')) {
         if (!isAuthenticated()) {
             console.log('🚫 Not authenticated, redirecting to login...');
             window.location.href = 'index.html';
