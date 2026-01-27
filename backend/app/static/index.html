@@ -656,7 +656,7 @@
                 // Success - redirect to dashboard
                 loadingText.textContent = 'Account created! Redirecting...';
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = '/app';
                 }, 1000);
                 
             } catch (error) {
@@ -765,7 +765,7 @@
                     const payload = JSON.parse(atob(token.split('.')[1]));
                     if (Date.now() < payload.exp * 1000) {
                         // Token is valid, redirect to dashboard
-                        window.location.href = 'dashboard.html';
+                        window.location.href = '/app';
                     }
                 } catch (e) {
                     // Token is invalid, clear it
