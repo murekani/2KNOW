@@ -1,8 +1,7 @@
-
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -42,21 +41,11 @@ allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5500,http://127
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # Changed to allow all for Railway deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Mount static files for frontend CSS/JS/Assets
-static_path = os.path.join(os.path.dirname(__file__), "static")
-if os.path.isdir(static_path):
-    if os.path.isdir(os.path.join(static_path, "css")):
-        app.mount("/css", StaticFiles(directory=os.path.join(static_path, "css")), name="css")
-    if os.path.isdir(os.path.join(static_path, "js")):
-        app.mount("/js", StaticFiles(directory=os.path.join(static_path, "js")), name="js")
-    if os.path.isdir(os.path.join(static_path, "assets")):
-        app.mount("/assets", StaticFiles(directory=os.path.join(static_path, "assets")), name="assets")
 
 # Pydantic models for request/response
 class UserRegister(BaseModel):
@@ -120,23 +109,7 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
     # You can add additional checks here if needed
     return current_user
 
-# Root endpoint - serve frontend
-@app.get("/", response_class=FileResponse)
-def read_root():
-    static_path = os.path.join(os.path.dirname(__file__), "static")
-    index_file = os.path.join(static_path, "index.html")
-    if os.path.exists(index_file):
-        return index_file
-    return {"message": "Welcome to 2KNOW API"}
-
-@app.get("/app", response_class=FileResponse)
-def serve_app():
-    static_path = os.path.join(os.path.dirname(__file__), "static")
-    dashboard_file = os.path.join(static_path, "dashboard.html")
-    if os.path.exists(dashboard_file):
-        return dashboard_file
-    return {"error": "Dashboard not found"}
-
+# API ROUTES - Defined BEFORE static files
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "2KNOW API", "timestamp": datetime.utcnow().isoformat()}
@@ -526,4 +499,31 @@ async def get_user_stats(current_user: models.User = Depends(get_current_active_
         "is_active": True
     }
 
+# ============ STATIC FILE SERVING ============
+# Mount static files AFTER all API routes are defined
+# This ensures API routes take precedence
+
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+
+# Check if static directory exists
+if os.path.exists(static_dir):
+    print(f"📁 Static directory found: {static_dir}")
+    
+    # Mount the entire static directory at root
+    # html=True allows serving index.html for directory requests
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+    print("✅ Static files mounted at root")
+else:
+    print(f"⚠️  Static directory not found: {static_dir}")
+
+# Fallback for SPA routing - catch all other routes
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    """Serve index.html for any route not matched by API or static files"""
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "2KNOW API is running but frontend files not found"}
+
 # ============ DEPLOYMENT COMPLETE ============
+print("🚀 2KNOW API started successfully!")
