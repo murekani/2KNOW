@@ -48,7 +48,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files for frontend
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "2KNOW API", "timestamp": datetime.utcnow().isoformat()}
+
+# Mount static files for frontend CSS/JS/Assets
 static_path = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(static_path):
     if os.path.isdir(os.path.join(static_path, "css")):
@@ -120,49 +125,27 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
     # You can add additional checks here if needed
     return current_user
 
-# Health check endpoint
-@app.get("/")
+# Root endpoint - serve frontend
+@app.get("/", response_class=FileResponse)
 def read_root():
-    # Try to serve index.html first (frontend)
     static_path = os.path.join(os.path.dirname(__file__), "static")
     index_file = os.path.join(static_path, "index.html")
-    
     if os.path.exists(index_file):
-        return FileResponse(index_file)
-    
-    # Fallback to API response
-    return {
-        "message": "Welcome to 2KNOW Market Trend Predictor API",
-        "status": "healthy",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "endpoints": {
-            "health": "/health",
-            "register": "/auth/register",
-            "login": "/auth/login",
-            "profile": "/auth/profile",
-            "trends": "/trends/{keyword}",
-            "protected_trends": "/api/trends/{keyword}"
-        }
-    }
+        return index_file
+    return {"message": "Welcome to 2KNOW API"}
+
+@app.get("/app", response_class=FileResponse)
+def serve_app():
+    static_path = os.path.join(os.path.dirname(__file__), "static")
+    dashboard_file = os.path.join(static_path, "dashboard.html")
+    if os.path.exists(dashboard_file):
+        return dashboard_file
+    return {"error": "Dashboard not found"}
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "2KNOW API", "timestamp": datetime.utcnow().isoformat()}
 
-# Serve dashboard
-@app.get("/app")
-def serve_dashboard():
-    """Serve dashboard.html"""
-    static_path = os.path.join(os.path.dirname(__file__), "static")
-    dashboard_file = os.path.join(static_path, "dashboard.html")
-    
-    if os.path.exists(dashboard_file):
-        return FileResponse(dashboard_file)
-    
-    return {"error": "Dashboard not found"}
-
-# Register new user - NO DEMO, REAL REGISTRATION
 @app.post("/auth/register")
 async def register(user: UserRegister, db: Session = Depends(get_db)):
     """
