@@ -1,25 +1,26 @@
 /**
  * API Configuration
- * Dynamically set based on environment
- * Version: 2 (Updated to use template literals in all files)
+ * Dynamically sets API URL based on environment (local vs production)
  */
 
-// Get API URL based on environment
+// Detect environment and return correct API URL
 function getApiUrl() {
-    // In production (Railway), use current domain
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        // Railway deployment: use same origin
-        const url = `${window.location.protocol}//${window.location.host}`;
-        console.log(`✅ Production mode detected. API URL: ${url}`);
-        return url;
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    // Production: deployed backend (Railway)
+    // If NOT localhost or 127.0.0.1, assume Railway deployment
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        // Use your deployed backend URL here (Railway)
+        return 'https://web-production-c80fe.up.railway.app';
     }
-    
+
     // Local development
-    const localUrl = 'http://127.0.0.1:8000';
-    console.log(`🏠 Development mode detected. API URL: ${localUrl}`);
-    return localUrl;
+    return 'http://127.0.0.1:8000';
 }
 
+// Export API URL constant
 const API_URL = getApiUrl();
 
+// Debug log
 console.log(`🔌 API Configuration loaded: ${API_URL}`);
