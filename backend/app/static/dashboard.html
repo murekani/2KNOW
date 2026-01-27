@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2KNOW - Market Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Add CSP meta tag to block extension interference -->
+    <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self' http://127.0.0.1:8000;
+  script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline';
+  style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
+  font-src 'self' https://cdnjs.cloudflare.com data:;
+  connect-src 'self' https://cdn.jsdelivr.net http://127.0.0.1:8000;
+">
+
+
+</head>
+<body class="dashboard-page">
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar collapsed">
+        <div class="logo-section">
+            <img src="assets/logo.png" alt="2KNOW Logo" class="logo-image">
+            <div class="logo-subtitle">Market Trend Predictor</div>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active" onclick="showSection('dashboard', event)">
+                <i class="fas fa-home"></i> <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showSection('search', event)">
+                <i class="fas fa-search"></i> <span>Market Search</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showSection('trends', event)">
+                <i class="fas fa-chart-line"></i> <span>Trend Analysis</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showSection('insights', event)">
+                <i class="fas fa-lightbulb"></i> <span>AI Insights</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showSection('settings', event)">
+                <i class="fas fa-cog"></i> <span>Settings</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <button class="hamburger-btn" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="header-title">
+                <h1 id="pageTitle">Market Intelligence Dashboard</h1>
+                <p class="subtitle" id="pageSubtitle">Real-time trend analysis for Kenyan markets</p>
+            </div>
+            <div class="header-actions">
+                <div class="header-profile">
+                    <button class="header-icon-btn" onclick="openProfileModal()" title="Profile">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <button class="header-icon-btn" onclick="openContactsModal()" title="Contact Us">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                </div>
+                <div class="date-display">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span id="currentDate">Loading...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="content-area">
+            <!-- DASHBOARD SECTION -->
+            <section id="dashboardSection" class="section active">
+                <div class="welcome-banner" id="welcomeBanner">
+                    <h2>Welcome to 2KNOW Analytics</h2>
+                    <p>Get real-time market trends for any product in Kenya. Start by searching above.</p>
+                    <div class="quick-stats" id="quickStats" style="display: none;">
+                        <div class="quick-stat">
+                            <i class="fas fa-bolt"></i>
+                            <span>Live analysis for: <strong id="lastKeyword">maize</strong></span>
+                        </div>
+                        <div class="quick-stat">
+                            <i class="fas fa-clock"></i>
+                            <span>Last updated: <strong id="lastUpdate">Just now</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4F46E5, #7C3AED);">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Live Trend Score</h3>
+                            <div class="stat-value" id="liveScore">--</div>
+                            <p>Current market interest</p>
+                            <div class="trend-indicator" id="liveTrendIndicator">
+                                <i class="fas fa-minus"></i> <span>No data</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #059669);">
+                            <i class="fas fa-industry"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Market Sector</h3>
+                            <div class="stat-value" id="marketSector">--</div>
+                            <p>Primary industry</p>
+                            <div class="market-tags" id="marketTags"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B, #D97706);">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Active Markets</h3>
+                            <div class="stat-value" id="hotMarkets">0</div>
+                            <p>High-activity regions</p>
+                            <div class="location-info" id="locationInfo">
+                                <i class="fas fa-map-pin"></i> Kenya
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #EF4444, #DC2626);">
+                            <i class="fas fa-trend-up"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Overall Score</h3>
+                            <div class="stat-value" id="overallScore">--</div>
+                            <p>Market potential</p>
+                            <div class="score-bar">
+                                <div class="score-fill" id="scoreBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Section -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-history"></i> Historical Trend Analysis</h3>
+                        <div class="chart-actions">
+                            <select id="timeRange" onchange="updateChartRange()">
+                                <option value="12">12 Months</option>
+                                <option value="6" selected>6 Months</option>
+                                <option value="3">3 Months</option>
+                            </select>
+                            <button class="chart-btn" onclick="downloadChartData()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                    <div class="chart-footer">
+                        <div class="chart-stats">
+                            <div class="chart-stat">
+                                <span class="stat-label">Peak Interest:</span>
+                                <span class="stat-value" id="peakValue">--</span>
+                            </div>
+                            <div class="chart-stat">
+                                <span class="stat-label">Average:</span>
+                                <span class="stat-value" id="avgValue">--</span>
+                            </div>
+                            <div class="chart-stat">
+                                <span class="stat-label">Trend:</span>
+                                <span class="stat-value" id="trendDirection">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Markets & Insights -->
+                <div class="row-grid">
+                    <div class="markets-container">
+                        <div class="section-header">
+                            <h3><i class="fas fa-store"></i> Relevant Physical Markets</h3>
+                            <p>Top markets for your product in Kenya</p>
+                        </div>
+                        <div class="markets-list" id="marketsList">
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <p>Search for a product to see relevant markets</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insights-container">
+                        <div class="section-header">
+                            <h3><i class="fas fa-lightbulb"></i> Market Insights</h3>
+                            <p>AI-powered recommendations</p>
+                        </div>
+                        <div class="insights-list" id="insightsList">
+                            <div class="insight-item">
+                                <i class="fas fa-info-circle"></i>
+                                <p>Search for a product to get market insights</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEARCH SECTION -->
+            <section id="searchSection" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-search"></i> Advanced Market Search</h2>
+                    <p>Find real-time market trends for any product across Kenya</p>
+                </div>
+
+                <div class="search-container">
+                    <div class="search-box-large">
+                        <div class="search-input-group">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="advancedKeyword" placeholder="Enter product name (e.g., maize, smartphones, cars)">
+                            <button onclick="searchFromAdvanced()">
+                                <i class="fas fa-chart-line"></i> Analyze
+                            </button>
+                        </div>
+                        <div class="search-suggestions">
+                            <p><i class="fas fa-fire" style="margin-right: 6px; color: var(--warning);"></i>Trending Searches</p>
+                            <div class="suggestion-tags">
+                                <span class="tag" onclick="quickSearch('maize')">Maize</span>
+                                <span class="tag" onclick="quickSearch('mobile phones')">Mobile Phones</span>
+                                <span class="tag" onclick="quickSearch('second hand cars')">Used Cars</span>
+                                <span class="tag" onclick="quickSearch('rice')">Rice</span>
+                                <span class="tag" onclick="quickSearch('laptops')">Laptops</span>
+                                <span class="tag" onclick="quickSearch('vegetables')">Vegetables</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="search-filters">
+                        <h3><i class="fas fa-sliders-h" style="margin-right: 6px;"></i>Filters</h3>
+                        <div class="filter-group">
+                            <label for="regionFilter"><i class="fas fa-map-marker-alt"></i> Region</label>
+                            <select id="regionFilter">
+                                <option value="KE">All Kenya</option>
+                                <option value="Baringo">Baringo County</option>
+                                <option value="Bomet">Bomet County</option>
+                                <option value="Bungoma">Bungoma County</option>
+                                <option value="Busia">Busia County</option>
+                                <option value="Calibri">Calibri County</option>
+                                <option value="Elgeyo-Marakwet">Elgeyo-Marakwet County</option>
+                                <option value="Embu">Embu County</option>
+                                <option value="Garissa">Garissa County</option>
+                                <option value="Homabay">Homa Bay County</option>
+                                <option value="Isiolo">Isiolo County</option>
+                                <option value="Kajiado">Kajiado County</option>
+                                <option value="Kakamega">Kakamega County</option>
+                                <option value="Kericho">Kericho County</option>
+                                <option value="Kiambu">Kiambu County</option>
+                                <option value="Kilifi">Kilifi County</option>
+                                <option value="Kirinyaga">Kirinyaga County</option>
+                                <option value="Kisii">Kisii County</option>
+                                <option value="Kisumu">Kisumu County</option>
+                                <option value="Kitui">Kitui County</option>
+                                <option value="Kwale">Kwale County</option>
+                                <option value="Laikipia">Laikipia County</option>
+                                <option value="Lamu">Lamu County</option>
+                                <option value="Machakos">Machakos County</option>
+                                <option value="Makueni">Makueni County</option>
+                                <option value="Mandera">Mandera County</option>
+                                <option value="Meru">Meru County</option>
+                                <option value="Migori">Migori County</option>
+                                <option value="Mombasa">Mombasa County</option>
+                                <option value="Murang'a">Murang'a County</option>
+                                <option value="Muranga">Muranga County</option>
+                                <option value="Nairobi">Nairobi County</option>
+                                <option value="Nakuru">Nakuru County</option>
+                                <option value="Nandi">Nandi County</option>
+                                <option value="Narok">Narok County</option>
+                                <option value="Nyamira">Nyamira County</option>
+                                <option value="Nyandarua">Nyandarua County</option>
+                                <option value="Nyeri">Nyeri County</option>
+                                <option value="Samburu">Samburu County</option>
+                                <option value="Siaya">Siaya County</option>
+                                <option value="Tanariver">Tana River County</option>
+                                <option value="Tharaka-Nithi">Tharaka Nithi County</option>
+                                <option value="Transnzoia">Trans Nzoia County</option>
+                                <option value="Turkana">Turkana County</option>
+                                <option value="Uasin-Gishu">Uasin Gishu County</option>
+                                <option value="VihigA">Vihiga County</option>
+                                <option value="WestPokot">West Pokot County</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="timeFilter"><i class="fas fa-calendar"></i> Time Range</label>
+                            <select id="timeFilter">
+                                <option value="12">12 Months</option>
+                                <option value="6" selected>6 Months</option>
+                                <option value="3">3 Months</option>
+                                <option value="1">1 Month</option>
+                            </select>
+                        </div>
+                        <button class="apply-filters" onclick="applyFilters()">
+                            <i class="fas fa-filter"></i> Apply
+                        </button>
+                    </div>
+
+                    <div class="search-results" id="searchResults">
+                        <div class="results-placeholder">
+                            <i class="fas fa-chart-bar"></i>
+                            <h3>Search for Products</h3>
+                            <p>Enter a product name above to analyze market trends and get insights</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TREND ANALYSIS SECTION -->
+            <section id="trendsSection" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> Trend Analysis</h2>
+                    <p>Detailed historical analysis and market comparisons</p>
+                </div>
+
+                <div class="trends-container">
+                    <div class="trend-controls">
+                        <h3><i class="fas fa-exchange-alt"></i> Compare Market Trends</h3>
+                        <div class="comparison-inputs">
+                            <input type="text" id="trend1" placeholder="Enter first product (e.g., maize)" value="maize">
+                            <input type="text" id="trend2" placeholder="Enter second product (e.g., rice)" value="rice">
+                            <button class="comparison-btn" onclick="compareTrends()">
+                                <i class="fas fa-search"></i> Compare
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="trend-charts">
+                        <h3><i class="fas fa-chart-area"></i> Market Trends Comparison</h3>
+                        <div class="charts-grid">
+                            <div class="chart-item">
+                                <h4>Product 1 Trend</h4>
+                                <canvas id="trendChart1"></canvas>
+                            </div>
+                            <div class="chart-item">
+                                <h4>Product 2 Trend</h4>
+                                <canvas id="trendChart2"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="trend-insights">
+                        <h3><i class="fas fa-star"></i> Comparison Analysis</h3>
+                        <div id="comparisonInsights" class="insights-comparison">
+                            <p style="color: rgba(255,255,255,0.7); text-align: center; padding: 40px; width: 100%;">
+                                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                                Compare two products to see detailed insights and analysis
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="trend-history">
+                        <h3><i class="fas fa-history"></i> Search History</h3>
+                        <div class="history-timeline" id="searchHistory">
+                            <p style="color: var(--gray); text-align: center; padding: 20px;">
+                                Your searches will appear here
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI INSIGHTS SECTION -->
+            <section id="insightsSection" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-lightbulb"></i> AI Market Insights</h2>
+                    <p>Intelligent recommendations and market predictions powered by machine learning</p>
+                </div>
+
+                <div class="insights-container-full">
+                    <div class="ai-badge">
+                        <i class="fas fa-brain"></i> AI-Powered Analysis
+                    </div>
+
+                    <div class="insight-cards">
+                        <div class="insight-card-large">
+                            <div class="insight-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h3>Market Opportunity</h3>
+                                <div class="opportunity-score" id="opportunityScore">--</div>
+                                <p>Based on current trends and demand patterns</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-card-large">
+                            <div class="insight-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h3>Best Time to Act</h3>
+                                <div class="time-recommendation" id="bestTime">--</div>
+                                <p>Optimal timing based on seasonal patterns</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="predictions">
+                        <h3><i class="fas fa-crystal-ball"></i> 30-Day Market Prediction</h3>
+                        <div class="prediction-chart">
+                            <canvas id="predictionChart"></canvas>
+                        </div>
+                        <div class="prediction-details" id="predictionDetails">
+                            <p><i class="fas fa-info-circle" style="margin-right: 8px;"></i>Enter a product in the search bar to get AI-powered predictions</p>
+                        </div>
+                    </div>
+
+                    <div class="recommendations">
+                        <h3><i class="fas fa-star"></i> Smart Recommendations</h3>
+                        <div class="recommendation-list" id="recommendationList">
+                            <div class="recommendation-item">
+                                <i class="fas fa-leaf"></i>
+                                <div>
+                                    <h4>Agricultural Products</h4>
+                                    <p>High demand in Nairobi and Mombasa markets. Seasonal patterns show peak demand Oct-Dec</p>
+                                </div>
+                                <span class="rec-score">85%</span>
+                            </div>
+                            <div class="recommendation-item">
+                                <i class="fas fa-mobile-alt"></i>
+                                <div>
+                                    <h4>Electronics & Gadgets</h4>
+                                    <p>Growing urban market segment with consistent 30% YoY growth. High margins</p>
+                                </div>
+                                <span class="rec-score">78%</span>
+                            </div>
+                            <div class="recommendation-item">
+                                <i class="fas fa-tshirt"></i>
+                                <div>
+                                    <h4>Fashion & Clothing</h4>
+                                    <p>Stable market demand with seasonal spikes during holidays and school terms</p>
+                                </div>
+                                <span class="rec-score">72%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KENYAN MARKETS SECTION -->
+            <section id="marketsSection" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-map-marked-alt"></i> Kenyan Markets Directory</h2>
+                    <p>Complete guide to physical markets across Kenya</p>
+                </div>
+
+                <div class="markets-directory">
+                    <div class="market-filters">
+                        <input type="text" id="marketSearch" placeholder="Search markets..." onkeyup="filterMarkets()">
+                        <select id="marketRegion" onchange="filterMarkets()">
+                            <option value="">All Regions</option>
+                            <option value="Baringo">Baringo County</option>
+                            <option value="Bomet">Bomet County</option>
+                            <option value="Bungoma">Bungoma County</option>
+                            <option value="Busia">Busia County</option>
+                            <option value="Calibri">Calibri County</option>
+                            <option value="Elgeyo-Marakwet">Elgeyo-Marakwet County</option>
+                            <option value="Embu">Embu County</option>
+                            <option value="Garissa">Garissa County</option>
+                            <option value="Homabay">Homa Bay County</option>
+                            <option value="Isiolo">Isiolo County</option>
+                            <option value="Kajiado">Kajiado County</option>
+                            <option value="Kakamega">Kakamega County</option>
+                            <option value="Kericho">Kericho County</option>
+                            <option value="Kiambu">Kiambu County</option>
+                            <option value="Kilifi">Kilifi County</option>
+                            <option value="Kirinyaga">Kirinyaga County</option>
+                            <option value="Kisii">Kisii County</option>
+                            <option value="Kisumu">Kisumu County</option>
+                            <option value="Kitui">Kitui County</option>
+                            <option value="Kwale">Kwale County</option>
+                            <option value="Laikipia">Laikipia County</option>
+                            <option value="Lamu">Lamu County</option>
+                            <option value="Machakos">Machakos County</option>
+                            <option value="Makueni">Makueni County</option>
+                            <option value="Mandera">Mandera County</option>
+                            <option value="Meru">Meru County</option>
+                            <option value="Migori">Migori County</option>
+                            <option value="Mombasa">Mombasa County</option>
+                            <option value="Murang'a">Murang'a County</option>
+                            <option value="Muranga">Muranga County</option>
+                            <option value="Nairobi">Nairobi County</option>
+                            <option value="Nakuru">Nakuru County</option>
+                            <option value="Nandi">Nandi County</option>
+                            <option value="Narok">Narok County</option>
+                            <option value="Nyamira">Nyamira County</option>
+                            <option value="Nyandarua">Nyandarua County</option>
+                            <option value="Nyeri">Nyeri County</option>
+                            <option value="Samburu">Samburu County</option>
+                            <option value="Siaya">Siaya County</option>
+                            <option value="Tanariver">Tana River County</option>
+                            <option value="Tharaka-Nithi">Tharaka Nithi County</option>
+                            <option value="Transnzoia">Trans Nzoia County</option>
+                            <option value="Turkana">Turkana County</option>
+                            <option value="Uasin-Gishu">Uasin Gishu County</option>
+                            <option value="VihigA">Vihiga County</option>
+                            <option value="WestPokot">West Pokot County</option>
+                        </select>
+                        <select id="marketType" onchange="filterMarkets()">
+                            <option value="">All Types</option>
+                            <option value="agriculture">Agriculture</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="clothing">Clothing</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+
+                    <div class="markets-grid" id="marketsDirectory">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- PROFILE SECTION -->
+            <section id="profileSection" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-user"></i> Your Profile</h2>
+                    <p>Manage your account and preferences</p>
+                </div>
+
+                <div class="profile-container">
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar-large">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                            <div class="profile-info">
+                                <h3 id="profileName">Loading...</h3>
+                                <p id="profileEmail">Loading...</p>
+                                <div class="member-since">
+                                    <i class="fas fa-calendar"></i>
+                                    Member since: <span id="memberSince">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="profile-stats">
+                            <div class="profile-stat">
+                                <h4>Searches Made</h4>
+                                <div class="stat-number" id="searchCount">0</div>
+                            </div>
+                            <div class="profile-stat">
+                                <h4>Market Reports</h4>
+                                <div class="stat-number" id="reportCount">0</div>
+                            </div>
+                            <div class="profile-stat">
+                                <h4>Account Level</h4>
+                                <div class="stat-number">Basic</div>
+                            </div>
+                        </div>
+
+                        <div class="profile-actions">
+                            <button class="profile-btn" onclick="uploadProfilePicture()">
+                                <i class="fas fa-camera"></i> Change Picture
+                            </button>
+                            <button class="profile-btn" onclick="showEditProfile()">
+                                <i class="fas fa-edit"></i> Edit Profile
+                            </button>
+                            <button class="profile-btn" onclick="changePassword()">
+                                <i class="fas fa-key"></i> Change Password
+                            </button>
+                            <button class="profile-btn" onclick="exportUserData()">
+                                <i class="fas fa-download"></i> Export Data
+                            </button>
+                        </div>
+                        
+                        <!-- Hidden file input for profile picture -->
+                        <input type="file" id="profilePictureInput" accept="image/*" style="display: none;" onchange="handleProfilePictureUpload(event)">
+                    </div>
+
+                    <div class="profile-details">
+                        <div class="detail-card">
+                            <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                            <div class="activity-list" id="activityList">
+                                <!-- Will be populated -->
+                            </div>
+                        </div>
+
+                        <div class="detail-card">
+                            <h3><i class="fas fa-chart-line"></i> Your Top Searches</h3>
+                            <div class="top-searches" id="topSearches">
+                                <!-- Will be populated -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS SECTION -->
+            <section id="settingsSection" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                    <p>Configure your 2KNOW experience</p>
+                </div>
+
+                <div class="settings-container">
+                    <div class="settings-tabs">
+                        <button class="settings-tab active" onclick="showSettingsTab('general', event)">
+                            <i class="fas fa-sliders-h"></i> General
+                        </button>
+                    </div>
+
+                    <div class="settings-content">
+                        <div id="generalSettings" class="settings-tab-content active">
+                            <h3>General Settings</h3>
+                           <div class="setting-item">
+    <label for="themeSetting">Theme</label>
+    <select id="themeSetting">
+        <option value="light">Light Mode</option>
+        <option value="dark">Dark Mode</option>
+        <option value="purple">Purple Theme</option>
+        <option value="ocean">Ocean Theme</option>
+        <option value="forest">Forest Theme</option>
+        <option value="sunset">Sunset Theme</option>
+    </select>
+</div>
+                           
+                            <div class="setting-item">
+                                <label for="regionSetting">Default Region</label>
+                                <select id="regionSetting">
+                                    <option value="KE">Kenya (All)</option>
+                                    <option value="Baringo">Baringo County</option>
+                                    <option value="Bomet">Bomet County</option>
+                                    <option value="Bungoma">Bungoma County</option>
+                                    <option value="Busia">Busia County</option>
+                                    <option value="Calibri">Calibri County</option>
+                                    <option value="Elgeyo-Marakwet">Elgeyo-Marakwet County</option>
+                                    <option value="Embu">Embu County</option>
+                                    <option value="Garissa">Garissa County</option>
+                                    <option value="Homabay">Homa Bay County</option>
+                                    <option value="Isiolo">Isiolo County</option>
+                                    <option value="Kajiado">Kajiado County</option>
+                                    <option value="Kakamega">Kakamega County</option>
+                                    <option value="Kericho">Kericho County</option>
+                                    <option value="Kiambu">Kiambu County</option>
+                                    <option value="Kilifi">Kilifi County</option>
+                                    <option value="Kirinyaga">Kirinyaga County</option>
+                                    <option value="Kisii">Kisii County</option>
+                                    <option value="Kisumu">Kisumu County</option>
+                                    <option value="Kitui">Kitui County</option>
+                                    <option value="Kwale">Kwale County</option>
+                                    <option value="Laikipia">Laikipia County</option>
+                                    <option value="Lamu">Lamu County</option>
+                                    <option value="Machakos">Machakos County</option>
+                                    <option value="Makueni">Makueni County</option>
+                                    <option value="Mandera">Mandera County</option>
+                                    <option value="Meru">Meru County</option>
+                                    <option value="Migori">Migori County</option>
+                                    <option value="Mombasa">Mombasa County</option>
+                                    <option value="Murang'a">Murang'a County</option>
+                                    <option value="Muranga">Muranga County</option>
+                                    <option value="Nairobi">Nairobi County</option>
+                                    <option value="Nakuru">Nakuru County</option>
+                                    <option value="Nandi">Nandi County</option>
+                                    <option value="Narok">Narok County</option>
+                                    <option value="Nyamira">Nyamira County</option>
+                                    <option value="Nyandarua">Nyandarua County</option>
+                                    <option value="Nyeri">Nyeri County</option>
+                                    <option value="Samburu">Samburu County</option>
+                                    <option value="Siaya">Siaya County</option>
+                                    <option value="Tanariver">Tana River County</option>
+                                    <option value="Tharaka-Nithi">Tharaka Nithi County</option>
+                                    <option value="Transnzoia">Trans Nzoia County</option>
+                                    <option value="Turkana">Turkana County</option>
+                                    <option value="Uasin-Gishu">Uasin Gishu County</option>
+                                    <option value="VihigA">Vihiga County</option>
+                                    <option value="WestPokot">West Pokot County</option>
+                                </select>
+                            </div>
+                            <button class="save-settings" onclick="saveSettings()">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingText">Analyzing market trends...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Scripts - ONLY ONCE -->
+    <script src="js/config.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/markets.js"></script>
+    
+    <!-- Initialize dashboard -->
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard initializing...');
+            
+            // Check if user is logged in
+            const token = localStorage.getItem('jwt_token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Load user info
+            if (window.loadUserInfo) {
+                window.loadUserInfo();
+            }
+            
+            // Set current date
+            updateCurrentDate();
+            
+            // Initialize charts
+            if (window.initChart) {
+                window.initChart();
+            }
+            
+            // Initialize market directory
+            if (window.initMarketDirectory) {
+                window.initMarketDirectory();
+            }
+            
+            // Load search history
+            if (window.loadSearchHistory) {
+                window.loadSearchHistory();
+            }
+            
+            // Load default data
+            setTimeout(() => {
+                // Try to load last search or default
+                const lastSearch = localStorage.getItem('last_search');
+                if (lastSearch) {
+                    document.getElementById('keywordInput').value = lastSearch;
+                    if (document.getElementById('lastKeyword')) {
+                        document.getElementById('lastKeyword').textContent = lastSearch;
+                    }
+                    if (document.getElementById('welcomeBanner')) {
+                        document.getElementById('welcomeBanner').style.display = 'block';
+                    }
+                    if (document.getElementById('quickStats')) {
+                        document.getElementById('quickStats').style.display = 'flex';
+                    }
+                }
+            }, 500);
+            
+            // Set up auto-refresh for date
+            setInterval(updateCurrentDate, 60000);
+        });
+        
+        function updateCurrentDate() {
+            const now = new Date();
+            const dateElement = document.getElementById('currentDate');
+            if (dateElement) {
+                dateElement.textContent = 
+                    now.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }) + ' • ' + now.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+            }
+        }
+        
+        // Simple theme changer if theme.js fails
+        function changeTheme(theme) {
+            console.log('Changing theme to:', theme);
+            
+            // Remove existing theme classes
+            document.body.classList.remove('light-theme', 'dark-theme');
+            
+            // Set the theme
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.body.style.backgroundColor = '#1f2937';
+                document.body.style.color = '#f3f4f6';
+            } else if (theme === 'light') {
+                document.body.classList.add('light-theme');
+                document.body.style.backgroundColor = '#ffffff';
+                document.body.style.color = '#1f2937';
+            } else if (theme === 'auto') {
+                // Auto detect based on system preference
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.classList.add('dark-theme');
+                    document.body.style.backgroundColor = '#1f2937';
+                    document.body.style.color = '#f3f4f6';
+                } else {
+                    document.body.classList.add('light-theme');
+                    document.body.style.backgroundColor = '#ffffff';
+                    document.body.style.color = '#1f2937';
+                }
+            }
+            
+            // Save theme preference
+            localStorage.setItem('app_theme', theme);
+            
+            // Show toast
+            if (window.showToast) {
+                window.showToast(`Theme changed to ${theme}`, 'success');
+            }
+        }
+    </script>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Profile Settings</h2>
+                <button class="modal-close" onclick="closeProfileModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-section">
+                    <div class="profile-avatar-large" id="profileAvatarModal">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <button class="btn-upload" onclick="uploadProfilePicture()">Change Profile Picture</button>
+                    <input type="file" id="profilePictureInput" style="display: none;" accept="image/*" onchange="handleProfilePictureUpload(event)">
+                </div>
+                
+                <div class="profile-info-section">
+                    <div class="info-item">
+                        <label>Full Name</label>
+                        <p id="modalProfileName">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <label>Email</label>
+                        <p id="modalProfileEmail">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <label>Member Since</label>
+                        <p id="modalMemberSince">Loading...</p>
+                    </div>
+                    <div class="info-item">
+                        <label>Searches Conducted</label>
+                        <p id="modalSearchCount">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeProfileModal()">Close</button>
+                <button class="btn btn-danger" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contacts Modal -->
+    <div id="contactsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Contact Information</h2>
+                <button class="modal-close" onclick="closeContactsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="contacts-section">
+                    <div class="contact-card">
+                        <div class="contact-icon" style="background: linear-gradient(135deg, #EA4335, #F59E0B);">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h3>Email</h3>
+                            <a href="mailto:victormure6@gmail.com" class="contact-link">victormure6@gmail.com</a>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-card">
+                        <div class="contact-icon" style="background: linear-gradient(135deg, #25D366, #128C7E);">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div class="contact-info">
+                            <h3>WhatsApp</h3>
+                            <a href="https://wa.me/254116094935" target="_blank" class="contact-link">+254 116094935</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeContactsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modalOverlay" class="modal-overlay" onclick="closeAllModals()"></div>
+
+</body>
+</html>

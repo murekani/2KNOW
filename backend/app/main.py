@@ -49,14 +49,14 @@ app.add_middleware(
 )
 
 # Mount static files for frontend
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
-if os.path.isdir(frontend_path):
-    if os.path.isdir(os.path.join(frontend_path, "css")):
-        app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
-    if os.path.isdir(os.path.join(frontend_path, "js")):
-        app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
-    if os.path.isdir(os.path.join(frontend_path, "assets")):
-        app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+static_path = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(static_path):
+    if os.path.isdir(os.path.join(static_path, "css")):
+        app.mount("/css", StaticFiles(directory=os.path.join(static_path, "css")), name="css")
+    if os.path.isdir(os.path.join(static_path, "js")):
+        app.mount("/js", StaticFiles(directory=os.path.join(static_path, "js")), name="js")
+    if os.path.isdir(os.path.join(static_path, "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join(static_path, "assets")), name="assets")
 
 # Pydantic models for request/response
 class UserRegister(BaseModel):
@@ -124,8 +124,8 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
 @app.get("/")
 def read_root():
     # Try to serve index.html first (frontend)
-    frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
-    index_file = os.path.join(frontend_path, "index.html")
+    static_path = os.path.join(os.path.dirname(__file__), "static")
+    index_file = os.path.join(static_path, "index.html")
     
     if os.path.exists(index_file):
         return FileResponse(index_file)
@@ -154,8 +154,8 @@ def health_check():
 @app.get("/app")
 def serve_dashboard():
     """Serve dashboard.html"""
-    frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
-    dashboard_file = os.path.join(frontend_path, "dashboard.html")
+    static_path = os.path.join(os.path.dirname(__file__), "static")
+    dashboard_file = os.path.join(static_path, "dashboard.html")
     
     if os.path.exists(dashboard_file):
         return FileResponse(dashboard_file)
