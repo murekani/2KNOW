@@ -114,6 +114,24 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
 def health_check():
     return {"status": "ok", "service": "2KNOW API", "timestamp": datetime.utcnow().isoformat()}
 
+@app.get("/", response_class=FileResponse)
+def read_root():
+    """Serve index.html from root"""
+    static_path = os.path.join(os.path.dirname(__file__), "static")
+    index_file = os.path.join(static_path, "index.html")
+    if os.path.exists(index_file):
+        return index_file
+    return {"message": "Welcome to 2KNOW API"}
+
+@app.get("/app", response_class=FileResponse)
+def serve_app():
+    """Serve dashboard.html"""
+    static_path = os.path.join(os.path.dirname(__file__), "static")
+    dashboard_file = os.path.join(static_path, "dashboard.html")
+    if os.path.exists(dashboard_file):
+        return dashboard_file
+    return {"error": "Dashboard not found"}
+
 @app.post("/auth/register")
 async def register(user: UserRegister, db: Session = Depends(get_db)):
     """
