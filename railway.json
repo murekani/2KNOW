@@ -4,6 +4,6 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "cd backend && python run.py"
+    "startCommand": "python backend/run.py"
   }
 }
