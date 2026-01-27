@@ -548,23 +548,4 @@ async def get_user_stats(current_user: models.User = Depends(get_current_active_
         "is_active": True
     }
 
-# ============ STATIC FILES SERVING ============
-# Serve frontend static files in production
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
-
-# Only mount if frontend exists (for Railway deployment)
-if os.path.isdir(frontend_path):
-    # Mount static files
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
-    app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
-    app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
-    
-    # Serve dashboard.html at /dashboard
-    @app.get("/app")
-    async def dashboard():
-        with open(os.path.join(frontend_path, "dashboard.html"), "r") as f:
-            return HTMLResponse(content=f.read())
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+# ============ DEPLOYMENT COMPLETE ============
