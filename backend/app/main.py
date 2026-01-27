@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -47,6 +47,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for frontend
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
+if os.path.isdir(frontend_path):
+    if os.path.isdir(os.path.join(frontend_path, "css")):
+        app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
+    if os.path.isdir(os.path.join(frontend_path, "js")):
+        app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
+    if os.path.isdir(os.path.join(frontend_path, "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
 
 # Pydantic models for request/response
 class UserRegister(BaseModel):
@@ -113,6 +123,14 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
 # Health check endpoint
 @app.get("/")
 def read_root():
+    # Try to serve index.html first (frontend)
+    frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
+    index_file = os.path.join(frontend_path, "index.html")
+    
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    
+    # Fallback to API response
     return {
         "message": "Welcome to 2KNOW Market Trend Predictor API",
         "status": "healthy",
@@ -131,6 +149,18 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "2KNOW API", "timestamp": datetime.utcnow().isoformat()}
+
+# Serve dashboard
+@app.get("/app")
+def serve_dashboard():
+    """Serve dashboard.html"""
+    frontend_path = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
+    dashboard_file = os.path.join(frontend_path, "dashboard.html")
+    
+    if os.path.exists(dashboard_file):
+        return FileResponse(dashboard_file)
+    
+    return {"error": "Dashboard not found"}
 
 # Register new user - NO DEMO, REAL REGISTRATION
 @app.post("/auth/register")
