@@ -115,7 +115,7 @@ async function getUserProfile() {
     try {
         console.log('📋 Fetching user profile...');
         
-        const response = await fetch('http://127.0.0.1:8000/auth/profile', {
+        const response = await fetch(`${API_URL}/auth/profile`, {
             method: 'GET',
             headers: { 
                 'Authorization': `Bearer ${token}`,
@@ -290,7 +290,7 @@ function loadUserInfo() {
 async function checkBackendHealth() {
     try {
         console.log('🔌 Checking backend health...');
-        const res = await fetch('http://127.0.0.1:8000/health');
+        const res = await fetch(`${API_URL}/health`);
         const data = await res.json();
         console.log('✅ Backend health:', data.status);
         return data.status === 'ok';
