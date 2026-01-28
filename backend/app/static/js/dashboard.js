@@ -6,6 +6,9 @@ let currentData = null;
 let searchHistory = [];
 let marketDirectory = [];
 
+// API Configuration
+const API_URL = 'https://api.2know.com'; // Change this to your actual API URL
+
 // Toggle Sidebar with content shifting
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -82,8 +85,6 @@ function showSection(sectionId, event) {
             'dashboard': ['Market Intelligence Dashboard', 'Real-time trend analysis for Kenyan markets'],
             'search': ['Market Search & Analysis', 'Advanced search and filtering capabilities'],
             'trends': ['Trend Analysis & Comparisons', 'Historical data and market comparisons'],
-            'insights': ['AI Market Insights', 'Intelligent recommendations and predictions'],
-            'markets': ['Kenyan Markets Directory', 'Complete guide to physical markets'],
             'profile': ['Your Profile', 'Manage your account and preferences'],
             'settings': ['Settings', 'Configure your 2KNOW experience']
         };
@@ -114,25 +115,247 @@ function showSection(sectionId, event) {
         case 'profile':
             loadProfileData();
             break;
-        case 'insights':
-            loadInsights();
-            break;
     }
 }
+
+// QUICK MARKET ANALYSIS FUNCTIONS
+
+// Analyze product from dashboard quick analysis card
+function analyzeDashboardProduct() {
+    const product = document.getElementById('dashboardProductInput').value.trim();
+    const region = document.getElementById('dashboardRegionSelect').value;
+    
+    if (!product) {
+        showToast('Please enter a product name', 'warning');
+        document.getElementById('dashboardProductInput').focus();
+        return;
+    }
+    
+    // Update the main region selector if it exists
+    const mainRegionSelector = document.getElementById('dashboardRegion');
+    if (mainRegionSelector) {
+        mainRegionSelector.value = region;
+    }
+    
+    // Perform the search
+    performSearch(product, region, 'dashboard');
+}
+
+// Quick analyze from dashboard suggestions
+function quickAnalyze(product, region) {
+    // Set the values in the quick analyze card
+    document.getElementById('dashboardProductInput').value = product;
+    document.getElementById('dashboardRegionSelect').value = region;
+    
+    // Update the main region selector if it exists
+    const mainRegionSelector = document.getElementById('dashboardRegion');
+    if (mainRegionSelector) {
+        mainRegionSelector.value = region;
+    }
+    
+    // Perform the search
+    performSearch(product, region, 'dashboard');
+}
+
+// Analyze with selected region from header
+function analyzeWithRegion() {
+    const region = document.getElementById('dashboardRegion').value;
+    const product = document.getElementById('dashboardProductInput').value.trim();
+    
+    if (!product) {
+        showToast('Please enter a product to analyze', 'warning');
+        document.getElementById('dashboardProductInput').focus();
+        return;
+    }
+    
+    performSearch(product, region, 'dashboard');
+}
+
+// Main search function
+async function performSearch(keyword, region = 'KE', source = 'dashboard') {
+    showLoading(`Analyzing "${keyword}" in ${region === 'KE' ? 'All Kenya' : region}...`);
+    
+    try {
+        const token = localStorage.getItem('jwt_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        
+        // Try to fetch from API
+        const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
+            headers: headers
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            data.region = region;
+            data.keyword = keyword;
+            currentData = data;
+            
+            // Update dashboard with results
+            updateDashboard(data);
+            
+            // Update search history
+            addToSearchHistory(keyword, data);
+            
+            showToast(`Trend analysis completed for "${keyword}" in ${region === 'KE' ? 'All Kenya' : region}`, 'success');
+            
+        } else {
+            // If API fails, use demo data
+            throw new Error('API not available, using demo data');
+        }
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        showToast('Using demo data for analysis', 'info');
+        
+        // Fallback to demo data
+        useFallbackData(keyword, region);
+    } finally {
+        hideLoading();
+    }
+}
+
+// YOUR ORIGINAL FUNCTIONS - ADDED BACK
 
 // Search trends from dashboard
 async function searchTrends() {
     const keywordInput = document.getElementById('keywordInput');
-    const keyword = keywordInput.value.trim();
+    const keyword = keywordInput?.value.trim();
     const region = document.getElementById('dashboardRegion').value;
     
     if (!keyword) {
         showToast('Please enter a product name to analyze', 'warning');
-        keywordInput.focus();
+        keywordInput?.focus();
         return;
     }
     
     await performSearch(keyword, region, 'dashboard');
+}
+
+// Update search results in search section
+function updateSearchResults(data, keyword) {
+    const searchResults = document.getElementById('searchResults');
+    if (!searchResults) return;
+    
+    const region = data.region || 'KE';
+    const regionName = region === 'KE' ? 'All Kenya' : region;
+    
+    searchResults.innerHTML = `
+        <div class="search-result-card">
+            <div class="result-header">
+                <h3>${keyword} Market Analysis</h3>
+                <span class="result-score">${data.overall_score || 0}% Match</span>
+            </div>
+            <div class="result-stats">
+                <div class="result-stat">
+                    <span class="stat-label">Live Trend Score</span>
+                    <span class="stat-value">${data.live_trend_score || 0}</span>
+                </div>
+                <div class="result-stat">
+                    <span class="stat-label">Market Sector</span>
+                    <span class="stat-value">${data.market_sector || 'General'}</span>
+                </div>
+                <div class="result-stat">
+                    <span class="stat-label">Active Markets</span>
+                    <span class="stat-value">${data.relevant_markets ? data.relevant_markets.length : 0}</span>
+                </div>
+            </div>
+            <div class="result-actions">
+                <button onclick="showSection('dashboard')">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+                <button onclick="downloadSearchReportPDF('${keyword}', '${region}')">
+                    <i class="fas fa-download"></i> Download Report
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Compare trends
+async function compareTrends() {
+    const trend1 = document.getElementById('trend1').value.trim();
+    const trend2 = document.getElementById('trend2').value.trim();
+    
+    if (!trend1 || !trend2) {
+        showToast('Enter two products to compare', 'warning');
+        return;
+    }
+    
+    showLoading(`Comparing ${trend1} vs ${trend2}...`);
+    
+    try {
+        // Fetch data for both products
+        const [data1, data2] = await Promise.all([
+            fetchTrendData(trend1),
+            fetchTrendData(trend2)
+        ]);
+        
+        // Update charts
+        updateComparisonCharts(data1, data2);
+        
+        // Update insights
+        updateComparisonInsights(data1, data2);
+        
+        showToast('Comparison completed', 'success');
+        
+    } catch (error) {
+        console.error('Comparison error:', error);
+        showToast('Failed to compare trends', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Fetch trend data for comparison
+async function fetchTrendData(keyword) {
+    const token = localStorage.getItem('jwt_token');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
+        headers: headers
+    });
+    
+    if (!response.ok) {
+        throw new Error(`API error for ${keyword}: ${response.status}`);
+    }
+    
+    return await response.json();
+}
+
+// Update comparison charts
+function updateComparisonCharts(data1, data2) {
+    // Implement comparison charts logic
+    console.log('Updating comparison charts:', data1.keyword, 'vs', data2.keyword);
+    // Your chart update logic here
+}
+
+// Update comparison insights
+function updateComparisonInsights(data1, data2) {
+    const comparisonInsights = document.getElementById('comparisonInsights');
+    if (!comparisonInsights) return;
+    
+    const score1 = data1.overall_score || 0;
+    const score2 = data2.overall_score || 0;
+    const winner = score1 > score2 ? data1.keyword : data2.keyword;
+    
+    comparisonInsights.innerHTML = `
+        <div class="comparison-summary">
+            <h4>Comparison Analysis</h4>
+            <p><strong>${data1.keyword}</strong>: ${score1}% market score</p>
+            <p><strong>${data2.keyword}</strong>: ${score2}% market score</p>
+            <p class="winner">🏆 <strong>${winner}</strong> has better market potential</p>
+        </div>
+    `;
+}
+
+// Load trend comparisons
+function loadTrendComparisons() {
+    // Load trend comparison data
+    const history = JSON.parse(localStorage.getItem('search_history') || '[]');
+    if (history.length >= 2) {
+        document.getElementById('trend1').value = history[0].keyword;
+        document.getElementById('trend2').value = history[1].keyword;
+    }
 }
 
 // Search from advanced search section
@@ -151,7 +374,7 @@ async function searchFromAdvanced() {
 
 // Advanced search specific function
 async function performAdvancedSearch(keyword, region = 'KE', timeRange = '6') {
-    showLoading(`Searching for "${keyword}" in ${region}...`);
+    showLoading(`Searching for "${keyword}" in ${region === 'KE' ? 'All Kenya' : region}...`);
     
     try {
         const token = localStorage.getItem('jwt_token');
@@ -161,20 +384,21 @@ async function performAdvancedSearch(keyword, region = 'KE', timeRange = '6') {
             headers: headers
         });
         
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+        if (response.ok) {
+            const data = await response.json();
+            data.region = region;
+            data.timeRange = timeRange;
+            
+            displayAdvancedSearchResults(data, keyword, region, timeRange);
+            showToast(`Found market analysis for "${keyword}"`, 'success');
+            
+        } else {
+            throw new Error('API not available');
         }
-        
-        const data = await response.json();
-        data.region = region;
-        data.timeRange = timeRange;
-        
-        displayAdvancedSearchResults(data, keyword, region, timeRange);
-        showToast(`Found market analysis for "${keyword}"`, 'success');
         
     } catch (error) {
         console.error('Search error:', error);
-        showToast('Failed to fetch data. Showing demo results.', 'warning');
+        showToast('Using demo data for analysis', 'info');
         
         // Show demo results
         const demoData = {
@@ -635,67 +859,6 @@ function downloadSearchReportPDF(keyword, region) {
     showToast('Report downloaded as PDF successfully', 'success');
 }
 
-// Quick search from suggestions
-function quickSearch(keyword) {
-    const advancedKeyword = document.getElementById('advancedKeyword');
-    if (advancedKeyword) {
-        advancedKeyword.value = keyword;
-        searchFromAdvanced();
-    } else {
-        document.getElementById('keywordInput').value = keyword;
-        searchTrends();
-    }
-}
-
-// Main search function
-async function performSearch(keyword, region = 'KE', source = 'dashboard') {
-    showLoading(`Analyzing "${keyword}" in ${region === 'KE' ? 'All Kenya' : region}...`);
-    
-    try {
-        const token = localStorage.getItem('jwt_token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        
-        const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
-            headers: headers
-        });
-        
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        data.region = region;
-        currentData = data;
-        
-        // Update dashboard with results
-        updateDashboard(data);
-        
-        // Update search history
-        addToSearchHistory(keyword, data);
-        
-        // Update UI based on source
-        if (source === 'dashboard') {
-            showToast(`Trend analysis completed for "${keyword}" in ${region}`, 'success');
-        } else if (source === 'search') {
-            updateSearchResults(data, keyword);
-        }
-        
-        // Update last search info
-        localStorage.setItem('last_search', keyword);
-        localStorage.setItem('last_search_region', region);
-        localStorage.setItem('last_search_data', JSON.stringify(data));
-        
-    } catch (error) {
-        console.error('Search error:', error);
-        showToast('Failed to fetch trend data. Showing demo analysis.', 'warning');
-        
-        // Fallback to demo data
-        useFallbackData(keyword, region);
-    } finally {
-        hideLoading();
-    }
-}
-
 // Update dashboard with search results
 function updateDashboard(data) {
     const region = data.region || 'KE';
@@ -723,6 +886,9 @@ function updateDashboard(data) {
         scoreBar.style.width = data.overall_score + '%';
     }
     
+    // Update trend indicator
+    updateTrendIndicator(data.live_trend_score);
+    
     // Update market tags
     updateMarketTags(data.market_sector);
     
@@ -734,8 +900,13 @@ function updateDashboard(data) {
     
     // Update chart
     if (data.historical_trends && data.historical_trends.length > 0) {
-        updateTrendChart(data.historical_trends, data.keyword);
+        updateTrendChart(data.historical_trends, data.keyword || 'Product');
         updateChartStats(data.historical_trends);
+    } else {
+        // Generate fallback chart data
+        const fallbackData = generateFallbackHistory(6);
+        updateTrendChart(fallbackData, data.keyword || 'Product');
+        updateChartStats(fallbackData);
     }
 }
 
@@ -750,6 +921,20 @@ function updateScoreColors(score, elementId) {
         element.style.color = '#F59E0B';
     } else {
         element.style.color = '#EF4444';
+    }
+}
+
+// Update trend indicator
+function updateTrendIndicator(score) {
+    const indicator = document.getElementById('liveTrendIndicator');
+    if (!indicator) return;
+    
+    if (score >= 70) {
+        indicator.innerHTML = '<i class="fas fa-arrow-up" style="color: #10B981;"></i> <span style="color: #10B981;">Strong</span>';
+    } else if (score >= 40) {
+        indicator.innerHTML = '<i class="fas fa-minus" style="color: #F59E0B;"></i> <span style="color: #F59E0B;">Moderate</span>';
+    } else {
+        indicator.innerHTML = '<i class="fas fa-arrow-down" style="color: #EF4444;"></i> <span style="color: #EF4444;">Weak</span>';
     }
 }
 
@@ -845,46 +1030,6 @@ function updateInsights(data) {
     `).join('');
 }
 
-// Update search results in search section
-function updateSearchResults(data, keyword) {
-    const searchResults = document.getElementById('searchResults');
-    if (!searchResults) return;
-    
-    const region = data.region || 'KE';
-    const regionName = region === 'KE' ? 'All Kenya' : region;
-    
-    searchResults.innerHTML = `
-        <div class="search-result-card">
-            <div class="result-header">
-                <h3>${keyword} Market Analysis</h3>
-                <span class="result-score">${data.overall_score || 0}% Match</span>
-            </div>
-            <div class="result-stats">
-                <div class="result-stat">
-                    <span class="stat-label">Live Trend Score</span>
-                    <span class="stat-value">${data.live_trend_score || 0}</span>
-                </div>
-                <div class="result-stat">
-                    <span class="stat-label">Market Sector</span>
-                    <span class="stat-value">${data.market_sector || 'General'}</span>
-                </div>
-                <div class="result-stat">
-                    <span class="stat-label">Active Markets</span>
-                    <span class="stat-value">${data.relevant_markets ? data.relevant_markets.length : 0}</span>
-                </div>
-            </div>
-            <div class="result-actions">
-                <button onclick="showSection('dashboard')">
-                    <i class="fas fa-eye"></i> View Details
-                </button>
-                <button onclick="downloadSearchReportPDF('${keyword}', '${region}')">
-                    <i class="fas fa-download"></i> Download Report
-                </button>
-            </div>
-        </div>
-    `;
-}
-
 // Add to search history
 function addToSearchHistory(keyword, data) {
     const history = JSON.parse(localStorage.getItem('search_history') || '[]');
@@ -913,241 +1058,217 @@ function addToSearchHistory(keyword, data) {
     updateSearchHistoryUI();
 }
 
-// Update search history UI
-function updateSearchHistoryUI() {
-    const historyList = document.getElementById('searchHistory');
-    if (!historyList) return;
-    
-    if (searchHistory.length === 0) {
-        historyList.innerHTML = '<p class="empty-text">No search history yet</p>';
-        return;
-    }
-    
-    historyList.innerHTML = searchHistory.map((item, index) => {
-        const regionName = item.region === 'KE' ? 'Kenya' : item.region;
-        return `
-            <div class="history-item" onclick="quickSearch('${item.keyword}')">
-                <div class="history-keyword">
-                    <i class="fas fa-search"></i>
-                    <span>${item.keyword}</span>
-                </div>
-                <div class="history-details">
-                    <span class="history-score">
-                        <i class="fas fa-chart-bar"></i> ${item.score}%
-                    </span>
-                    <span class="history-region" style="font-size: 11px; color: var(--light-gray);">
-                        <i class="fas fa-map-marker-alt"></i> ${regionName}
-                    </span>
-                    <span class="history-time">${formatTimeAgo(item.timestamp)}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Load search history
-function loadSearchHistory() {
-    searchHistory = JSON.parse(localStorage.getItem('search_history') || '[]');
-    updateSearchHistoryUI();
-}
-
-// Compare trends
-async function compareTrends() {
-    const trend1 = document.getElementById('trend1').value.trim();
-    const trend2 = document.getElementById('trend2').value.trim();
-    
-    if (!trend1 || !trend2) {
-        showToast('Enter two products to compare', 'warning');
-        return;
-    }
-    
-    showLoading(`Comparing ${trend1} vs ${trend2}...`);
-    
-    try {
-        // Fetch data for both products
-        const [data1, data2] = await Promise.all([
-            fetchTrendData(trend1),
-            fetchTrendData(trend2)
-        ]);
-        
-        // Update charts
-        updateComparisonCharts(data1, data2);
-        
-        // Update insights
-        updateComparisonInsights(data1, data2);
-        
-        showToast('Comparison completed', 'success');
-        
-    } catch (error) {
-        console.error('Comparison error:', error);
-        showToast('Failed to compare trends', 'error');
-    } finally {
-        hideLoading();
+// Quick search from suggestions
+function quickSearch(keyword) {
+    const advancedKeyword = document.getElementById('advancedKeyword');
+    if (advancedKeyword) {
+        advancedKeyword.value = keyword;
+        searchFromAdvanced();
+    } else {
+        document.getElementById('dashboardProductInput').value = keyword;
+        analyzeDashboardProduct();
     }
 }
 
-// Fetch trend data for comparison
-async function fetchTrendData(keyword) {
-    const token = localStorage.getItem('jwt_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+// Fallback data for testing
+function useFallbackData(keyword, region = 'KE') {
+    const fallbackData = {
+        keyword: keyword,
+        region: region,
+        live_trend_score: Math.floor(Math.random() * 30) + 50,
+        historical_trends: generateFallbackHistory(6),
+        market_sector: keyword.includes('maize') ? 'Agriculture' : 
+                      keyword.includes('phone') ? 'Electronics' :
+                      keyword.includes('car') ? 'Automotive' : 'General',
+        relevant_markets: ['Nairobi Market', 'Mombasa', 'Kisumu', 'Nakuru'].slice(0, Math.floor(Math.random() * 3) + 2),
+        overall_score: Math.floor(Math.random() * 30) + 50,
+        data_source: 'Demo Data'
+    };
     
-    const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
-        headers: headers
-    });
+    updateDashboard(fallbackData);
+    addToSearchHistory(keyword, fallbackData);
+}
+
+function generateFallbackHistory(months = 6) {
+    const history = [];
+    const today = new Date();
     
-    if (!response.ok) {
-        throw new Error(`API error for ${keyword}: ${response.status}`);
+    for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 15);
+        history.push({
+            date: date.toISOString().split('T')[0],
+            value: Math.floor(Math.random() * 30) + 50
+        });
     }
     
-    return await response.json();
+    return history;
 }
 
-// Initialize market directory
-function initMarketDirectory() {
-    marketDirectory = [
-        {
-            name: "Wakulima Market",
-            region: "Nairobi",
-            type: "agriculture",
-            description: "Largest fresh produce distribution market in East Africa",
-            products: ["Vegetables", "Fruits", "Grains", "Spices", "Wholesale Produce"]
-        },
-        {
-            name: "Kariakor Market",
-            region: "Nairobi",
-            type: "general",
-            description: "Established general market with mixed goods and textiles",
-            products: ["Textiles", "Clothing", "Household Items", "Cooking Utensils"]
-        },
-        {
-            name: "Gikomba Market",
-            region: "Nairobi",
-            type: "clothing",
-            description: "Africa's largest second-hand clothing market",
-            products: ["Second-hand Clothes", "Shoes", "Accessories", "Vintage Items"]
-        },
-        {
-            name: "Biashara Street",
-            region: "Nairobi",
-            type: "electronics",
-            description: "Premier electronics hub for phones and computers",
-            products: ["Mobile Phones", "Computers", "Electronics", "Tech Accessories"]
-        },
-        {
-            name: "Mwembe Tayari Market",
-            region: "Mombasa",
-            type: "general",
-            description: "Major coastal trading center for spices and textiles",
-            products: ["Spices", "Fish", "Seafood", "Textiles", "Clothing"]
-        },
-        {
-            name: "Kisumu Main Market",
-            region: "Kisumu",
-            type: "agriculture",
-            description: "Lake region agricultural hub specializing in fish and rice",
-            products: ["Fish", "Rice", "Vegetables", "Fruits", "Lake Produce"]
-        },
-        {
-            name: "Nakuru Market",
-            region: "Nakuru",
-            type: "agriculture",
-            description: "Rift Valley produce market for dairy and cereals",
-            products: ["Dairy", "Cereals", "Vegetables", "Fruits", "Eggs"]
-        },
-        {
-            name: "Eldoret Market",
-            region: "Eldoret",
-            type: "agriculture",
-            description: "Major grain trading center for maize and wheat",
-            products: ["Maize", "Wheat", "Cereals", "Livestock Feed", "Grains"]
-        }
-    ];
-    
-    loadMarketDirectory();
-}
+// CHART FUNCTIONS
 
-// Load and display market directory
-function loadMarketDirectory() {
-    const directory = document.getElementById('marketsDirectory');
-    if (!directory) return;
+// Initialize chart
+function initChart() {
+    const ctx = document.getElementById('trendChart');
+    if (!ctx) return;
     
-    if (marketDirectory.length === 0) {
-        directory.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                <i class="fas fa-store" style="font-size: 48px; color: var(--light-gray); margin-bottom: 16px;"></i>
-                <p>No markets available. Please check back later.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    directory.innerHTML = marketDirectory.map(market => `
-        <div class="market-card" data-region="${market.region}" data-type="${market.type}">
-            <h4>${market.name}</h4>
-            <div class="market-region">
-                <i class="fas fa-map-marker-alt"></i> ${market.region}
-            </div>
-            <p class="market-description">${market.description}</p>
-            <div class="market-products">
-                <strong>Main Products:</strong>
-                <div class="product-tags">
-                    ${market.products.map(product => `<span class="product-tag">${product}</span>`).join('')}
-                </div>
-            </div>
-            <div class="market-actions">
-                <button onclick="analyzeMarket('${market.name}')">
-                    <i class="fas fa-chart-line"></i> Analyze
-                </button>
-                <button onclick="viewMarketDetails('${market.name}')">
-                    <i class="fas fa-info-circle"></i> Details
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Filter markets
-function filterMarkets() {
-    const search = document.getElementById('marketSearch').value.toLowerCase();
-    const region = document.getElementById('marketRegion').value;
-    const type = document.getElementById('marketType').value;
-    
-    const cards = document.querySelectorAll('.market-card');
-    let visibleCount = 0;
-    
-    cards.forEach(card => {
-        const name = card.querySelector('h4').textContent.toLowerCase();
-        const cardRegion = card.getAttribute('data-region');
-        const cardType = card.getAttribute('data-type');
-        
-        const matchesSearch = !search || name.includes(search);
-        const matchesRegion = !region || cardRegion === region;
-        const matchesType = !type || cardType === type;
-        
-        if (matchesSearch && matchesRegion && matchesType) {
-            card.style.display = 'block';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
+    // Default empty chart
+    currentChart = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Market Interest',
+                data: [50, 55, 52, 60, 58, 62],
+                borderColor: '#4F46E5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(255,255,255,0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.7)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255,255,255,0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.7)'
+                    }
+                }
+            }
         }
     });
+}
+
+// Update trend chart
+function updateTrendChart(data, label) {
+    const ctx = document.getElementById('trendChart');
+    if (!ctx || !data || data.length === 0) return;
     
-    // Show no results message
-    const directory = document.getElementById('marketsDirectory');
-    const noResults = directory.querySelector('.no-results');
-    if (visibleCount === 0) {
-        if (!noResults) {
-            directory.innerHTML += `
-                <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                    <i class="fas fa-search" style="font-size: 48px; color: var(--light-gray); margin-bottom: 16px;"></i>
-                    <p>No markets found matching your criteria</p>
-                </div>
-            `;
+    // Destroy existing chart
+    if (currentChart) {
+        currentChart.destroy();
+    }
+    
+    // Prepare chart data
+    const labels = data.map(item => {
+        const date = new Date(item.date);
+        return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    });
+    
+    const values = data.map(item => item.value);
+    
+    // Create new chart
+    currentChart = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label || 'Market Interest',
+                data: values,
+                borderColor: '#4F46E5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#4F46E5',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: '#4F46E5',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: Math.min(...values) - 10,
+                    max: Math.max(...values) + 10,
+                    grid: {
+                        color: 'rgba(255,255,255,0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.7)',
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255,255,255,0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255,255,255,0.7)'
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
         }
-    } else if (noResults) {
-        noResults.remove();
+    });
+}
+
+// Update chart stats
+function updateChartStats(data) {
+    if (!data || data.length === 0) return;
+    
+    const values = data.map(item => item.value);
+    const peakValue = Math.max(...values);
+    const avgValue = Math.round(values.reduce((a, b) => a + b) / values.length);
+    const trend = values[values.length - 1] > values[0] ? 'Upward ↗' : 
+                 values[values.length - 1] < values[0] ? 'Downward ↘' : 'Stable →';
+    
+    document.getElementById('peakValue').textContent = peakValue + '%';
+    document.getElementById('avgValue').textContent = avgValue + '%';
+    document.getElementById('trendDirection').textContent = trend;
+}
+
+// Update chart range
+function updateChartRange() {
+    const timeRange = document.getElementById('timeRange').value;
+    if (currentData && window.updateTrendChart) {
+        // Generate data based on time range
+        const filteredData = generateFallbackHistory(parseInt(timeRange));
+        
+        window.updateTrendChart(filteredData, currentData.keyword || 'Product');
+        updateChartStats(filteredData);
     }
 }
+
+// PROFILE FUNCTIONS
 
 // Load profile data
 function loadProfileData() {
@@ -1181,23 +1302,6 @@ function loadProfileData() {
     
     // Load saved settings
     loadSavedSettings();
-}
-
-// Load saved settings into the form
-function loadSavedSettings() {
-    const savedTheme = localStorage.getItem('app_theme') || 'light';
-    const savedRegion = localStorage.getItem('app_region') || 'KE';
-    
-    const themeSelector = document.getElementById('themeSetting');
-    const regionSelector = document.getElementById('regionSetting');
-    
-    if (themeSelector) {
-        themeSelector.value = savedTheme;
-    }
-    
-    if (regionSelector) {
-        regionSelector.value = savedRegion;
-    }
 }
 
 // Update activity list
@@ -1252,55 +1356,85 @@ function updateTopSearches(history) {
     `).join('');
 }
 
-// Load insights
-function loadInsights() {
-    const history = JSON.parse(localStorage.getItem('search_history') || '[]');
+// Update all profile avatars
+function updateProfileAvatars() {
+    const profilePicture = localStorage.getItem('profile_picture');
     
-    if (history.length > 0) {
-        const recentScore = history.length > 0 ? history[0].score : 50;
-        document.getElementById('opportunityScore').textContent = recentScore + '%';
-        
-        const now = new Date();
-        const month = now.getMonth();
-        const bestTime = month >= 9 && month <= 11 ? 'Oct-Dec (Peak Season)' : 'Good time to invest';
-        document.getElementById('bestTime').textContent = bestTime;
-        
-        updatePredictionInsights(history);
+    // Update large profile avatar
+    const largeAvatar = document.getElementById('profileAvatarLarge');
+    if (largeAvatar) {
+        if (profilePicture) {
+            largeAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+        } else {
+            largeAvatar.innerHTML = '<i class="fas fa-user-circle"></i>';
+        }
+    }
+    
+    // Update sidebar avatar
+    const userAvatar = document.querySelector('.user-avatar');
+    if (userAvatar) {
+        if (profilePicture) {
+            userAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+        } else {
+            userAvatar.innerHTML = '<i class="fas fa-user-circle"></i>';
+        }
+    }
+    
+    // Update modal avatar if exists
+    const modalAvatar = document.getElementById('profileAvatarModal');
+    if (modalAvatar) {
+        if (profilePicture) {
+            modalAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+        } else {
+            modalAvatar.innerHTML = '<i class="fas fa-user-circle"></i>';
+        }
     }
 }
 
-// Update prediction insights with dynamic data
-function updatePredictionInsights(history) {
-    const predictionDetails = document.getElementById('predictionDetails');
-    if (!predictionDetails) return;
+// Upload Profile Picture
+function uploadProfilePicture() {
+    const fileInput = document.getElementById('profilePictureInput');
+    fileInput.click();
+}
+
+// Handle Profile Picture Upload
+function handleProfilePictureUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     
-    if (history.length === 0) {
-        predictionDetails.innerHTML = '<p><i class="fas fa-info-circle" style="margin-right: 8px;"></i>Enter a product in the search bar to get AI-powered predictions</p>';
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('File size must be less than 5MB', 'error');
         return;
     }
     
-    const lastSearch = history[0];
-    const avgScore = Math.round(history.reduce((sum, item) => sum + item.score, 0) / history.length);
-    const trend = lastSearch.score > avgScore ? 'Rising' : lastSearch.score < avgScore ? 'Declining' : 'Stable';
-    const trendIcon = trend === 'Rising' ? '📈' : trend === 'Declining' ? '📉' : '→';
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file', 'error');
+        return;
+    }
     
-    predictionDetails.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-            <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #10B981;">
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Last Search</div>
-                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">"${lastSearch.keyword}"</div>
-            </div>
-            <div style="background: rgba(79, 70, 229, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #4F46E5;">
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Trend Direction</div>
-                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${trendIcon} ${trend}</div>
-            </div>
-            <div style="background: rgba(245, 158, 11, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #F59E0B;">
-                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Avg Market Score</div>
-                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${avgScore}%</div>
-            </div>
-        </div>
-    `;
+    // Read file as data URL
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageData = e.target.result;
+        
+        // Save to localStorage
+        localStorage.setItem('profile_picture', imageData);
+        
+        // Update avatars
+        updateProfileAvatars();
+        
+        // Clear input
+        event.target.value = '';
+        
+        showToast('Profile picture updated successfully', 'success');
+    };
+    
+    reader.readAsDataURL(file);
 }
+
+// YOUR ORIGINAL EDIT PROFILE FUNCTIONS
 
 // Edit Profile - Show modal
 function showEditProfile() {
@@ -1551,6 +1685,22 @@ function exportUserDataPDF() {
     }, 1000);
 }
 
+// Delete account data
+function deleteAccountData() {
+    if (confirm('Are you sure you want to delete all your account data? This action cannot be undone.')) {
+        localStorage.removeItem('search_history');
+        localStorage.removeItem('profile_picture');
+        localStorage.removeItem('user_bio');
+        
+        showToast('Account data deleted successfully', 'success');
+        
+        // Refresh profile data
+        if (window.loadProfileData) {
+            window.loadProfileData();
+        }
+    }
+}
+
 // Close modal
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -1590,87 +1740,54 @@ function showSettingsTab(tabId, event) {
     document.getElementById(tabId + 'Settings').classList.add('active');
 }
 
-// Save settings
-function saveSettings() {
-    const theme = document.getElementById('themeSetting').value;
-    const region = document.getElementById('regionSetting').value;
+// Load insights
+function loadInsights() {
+    const history = JSON.parse(localStorage.getItem('search_history') || '[]');
     
-    // Save settings
-    localStorage.setItem('app_theme', theme);
-    localStorage.setItem('app_region', region);
-    
-    // Apply theme immediately
-    if (window.applyTheme) {
-        window.applyTheme(theme);
-    }
-    
-    // Update dashboard region if on dashboard
-    const dashboardRegion = document.getElementById('dashboardRegion');
-    if (dashboardRegion && region !== 'KE') {
-        dashboardRegion.value = region;
-    }
-    
-    showToast('Settings saved successfully', 'success');
-}
-
-// Show loading
-function showLoading(message = 'Loading...') {
-    const overlay = document.getElementById('loadingOverlay');
-    const loadingText = document.getElementById('loadingText');
-    
-    if (overlay && loadingText) {
-        loadingText.textContent = message;
-        overlay.style.display = 'flex';
+    if (history.length > 0) {
+        const recentScore = history.length > 0 ? history[0].score : 50;
+        document.getElementById('opportunityScore').textContent = recentScore + '%';
+        
+        const now = new Date();
+        const month = now.getMonth();
+        const bestTime = month >= 9 && month <= 11 ? 'Oct-Dec (Peak Season)' : 'Good time to invest';
+        document.getElementById('bestTime').textContent = bestTime;
+        
+        updatePredictionInsights(history);
     }
 }
 
-// Hide loading
-function hideLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.style.display = 'none';
-    }
-}
-
-// Show toast notification
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+// Update prediction insights with dynamic data
+function updatePredictionInsights(history) {
+    const predictionDetails = document.getElementById('predictionDetails');
+    if (!predictionDetails) return;
     
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 
-                          type === 'error' ? 'exclamation-circle' : 
-                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
-        <span>${message}</span>
+    if (history.length === 0) {
+        predictionDetails.innerHTML = '<p><i class="fas fa-info-circle" style="margin-right: 8px;"></i>Enter a product in the search bar to get AI-powered predictions</p>';
+        return;
+    }
+    
+    const lastSearch = history[0];
+    const avgScore = Math.round(history.reduce((sum, item) => sum + item.score, 0) / history.length);
+    const trend = lastSearch.score > avgScore ? 'Rising' : lastSearch.score < avgScore ? 'Declining' : 'Stable';
+    const trendIcon = trend === 'Rising' ? '📈' : trend === 'Declining' ? '📉' : '→';
+    
+    predictionDetails.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #10B981;">
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Last Search</div>
+                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">"${lastSearch.keyword}"</div>
+            </div>
+            <div style="background: rgba(79, 70, 229, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #4F46E5;">
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Trend Direction</div>
+                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${trendIcon} ${trend}</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #F59E0B;">
+                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Avg Market Score</div>
+                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${avgScore}%</div>
+            </div>
+        </div>
     `;
-    
-    container.appendChild(toast);
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 5000);
-}
-
-// Format time ago
-function formatTimeAgo(timestamp) {
-    const now = new Date();
-    const past = new Date(timestamp);
-    const diff = now - past;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    
-    return past.toLocaleDateString();
 }
 
 // Apply filters (for search section)
@@ -1687,65 +1804,81 @@ function applyFilters() {
     performAdvancedSearch(keyword, region, timeRange);
 }
 
-// Update chart range
-function updateChartRange() {
-    const timeRange = document.getElementById('timeRange').value;
-    if (currentData && window.updateTrendChart) {
-        // Simulate fetching new data based on time range
-        const filteredData = currentData.historical_trends ? 
-            currentData.historical_trends.slice(-parseInt(timeRange)) : 
-            generateFallbackHistory(parseInt(timeRange));
+// Initialize market directory
+function initMarketDirectory() {
+    marketDirectory = [
+        {
+            name: "Wakulima Market",
+            region: "Nairobi",
+            type: "agriculture",
+            description: "Largest fresh produce distribution market in East Africa",
+            products: ["Vegetables", "Fruits", "Grains", "Spices", "Wholesale Produce"]
+        },
+        {
+            name: "Kariakor Market",
+            region: "Nairobi",
+            type: "general",
+            description: "Established general market with mixed goods and textiles",
+            products: ["Textiles", "Clothing", "Household Items", "Cooking Utensils"]
+        },
+        {
+            name: "Gikomba Market",
+            region: "Nairobi",
+            type: "clothing",
+            description: "Africa's largest second-hand clothing market",
+            products: ["Second-hand Clothes", "Shoes", "Accessories", "Vintage Items"]
+        },
+        {
+            name: "Biashara Street",
+            region: "Nairobi",
+            type: "electronics",
+            description: "Premier electronics hub for phones and computers",
+            products: ["Mobile Phones", "Computers", "Electronics", "Tech Accessories"]
+        }
+    ];
+}
+
+// Filter markets
+function filterMarkets() {
+    const search = document.getElementById('marketSearch').value.toLowerCase();
+    const region = document.getElementById('marketRegion').value;
+    const type = document.getElementById('marketType').value;
+    
+    const cards = document.querySelectorAll('.market-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const name = card.querySelector('h4').textContent.toLowerCase();
+        const cardRegion = card.getAttribute('data-region');
+        const cardType = card.getAttribute('data-type');
         
-        window.updateTrendChart(filteredData, currentData.keyword || 'Product');
-        updateChartStats(filteredData);
+        const matchesSearch = !search || name.includes(search);
+        const matchesRegion = !region || cardRegion === region;
+        const matchesType = !type || cardType === type;
+        
+        if (matchesSearch && matchesRegion && matchesType) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show no results message
+    const directory = document.getElementById('marketsDirectory');
+    const noResults = directory.querySelector('.no-results');
+    if (visibleCount === 0) {
+        if (!noResults) {
+            directory.innerHTML += `
+                <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                    <i class="fas fa-search" style="font-size: 48px; color: var(--light-gray); margin-bottom: 16px;"></i>
+                    <p>No markets found matching your criteria</p>
+                </div>
+            `;
+        }
+    } else if (noResults) {
+        noResults.remove();
     }
-}
-
-// Update chart stats
-function updateChartStats(data) {
-    if (!data || data.length === 0) return;
-    
-    const values = data.map(item => item.value);
-    const peakValue = Math.max(...values);
-    const avgValue = Math.round(values.reduce((a, b) => a + b) / values.length);
-    const trend = values[values.length - 1] > values[0] ? 'Upward' : values[values.length - 1] < values[0] ? 'Downward' : 'Stable';
-    
-    document.getElementById('peakValue').textContent = peakValue;
-    document.getElementById('avgValue').textContent = avgValue;
-    document.getElementById('trendDirection').textContent = trend;
-}
-
-// Fallback data for testing
-function useFallbackData(keyword, region = 'KE') {
-    const fallbackData = {
-        keyword: keyword,
-        region: region,
-        live_trend_score: Math.floor(Math.random() * 30) + 50,
-        historical_trends: generateFallbackHistory(6),
-        market_sector: keyword.includes('maize') ? 'Agriculture' : 
-                      keyword.includes('phone') ? 'Electronics' :
-                      keyword.includes('car') ? 'Automotive' : 'General',
-        relevant_markets: ['Nairobi Market', 'Mombasa', 'Kisumu', 'Nakuru'].slice(0, Math.floor(Math.random() * 3) + 2),
-        overall_score: Math.floor(Math.random() * 30) + 50,
-        data_source: 'Demo Data'
-    };
-    
-    updateDashboard(fallbackData);
-}
-
-function generateFallbackHistory(months = 6) {
-    const history = [];
-    const today = new Date();
-    
-    for (let i = months - 1; i >= 0; i--) {
-        const date = new Date(today.getFullYear(), today.getMonth() - i, 15);
-        history.push({
-            date: date.toISOString().split('T')[0],
-            value: Math.floor(Math.random() * 30) + 50
-        });
-    }
-    
-    return history;
 }
 
 // Analyze market from directory
@@ -1754,7 +1887,7 @@ function analyzeMarket(marketName) {
     if (market) {
         // Set up search for this market's main product
         const mainProduct = market.products[0];
-        document.getElementById('keywordInput').value = mainProduct;
+        document.getElementById('dashboardProductInput').value = mainProduct;
         document.getElementById('dashboardRegion').value = market.region;
         document.getElementById('dashboardProductInput').value = mainProduct;
         document.getElementById('dashboardRegionSelect').value = market.region;
@@ -1840,124 +1973,144 @@ function viewMarketDetails(marketName) {
     }
 }
 
-// Handle Profile Picture Upload
-function handleProfilePictureUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+// UTILITY FUNCTIONS
+
+// Show loading
+function showLoading(message = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
     
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        showToast('File size must be less than 5MB', 'error');
+    if (overlay && loadingText) {
+        loadingText.textContent = message;
+        overlay.style.display = 'flex';
+    }
+}
+
+// Hide loading
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'exclamation-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+// Format time ago
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diff = now - past;
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    
+    return past.toLocaleDateString();
+}
+
+// Load search history
+function loadSearchHistory() {
+    searchHistory = JSON.parse(localStorage.getItem('search_history') || '[]');
+    updateSearchHistoryUI();
+}
+
+// Update search history UI
+function updateSearchHistoryUI() {
+    const historyList = document.getElementById('searchHistory');
+    if (!historyList) return;
+    
+    if (searchHistory.length === 0) {
+        historyList.innerHTML = '<p class="empty-text">No search history yet</p>';
         return;
     }
     
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-        showToast('Please select a valid image file', 'error');
-        return;
-    }
-    
-    // Read file as data URL
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const imageData = e.target.result;
-        
-        // Save to localStorage
-        localStorage.setItem('profile_picture', imageData);
-        
-        // Update avatars
-        updateProfileAvatars();
-        
-        // Clear input
-        event.target.value = '';
-        
-        showToast('Profile picture updated successfully', 'success');
-    };
-    
-    reader.readAsDataURL(file);
+    historyList.innerHTML = searchHistory.map((item, index) => {
+        const regionName = item.region === 'KE' ? 'Kenya' : item.region;
+        return `
+            <div class="history-item" onclick="quickSearch('${item.keyword}')">
+                <div class="history-keyword">
+                    <i class="fas fa-search"></i>
+                    <span>${item.keyword}</span>
+                </div>
+                <div class="history-details">
+                    <span class="history-score">
+                        <i class="fas fa-chart-bar"></i> ${item.score}%
+                    </span>
+                    <span class="history-region" style="font-size: 11px; color: var(--light-gray);">
+                        <i class="fas fa-map-marker-alt"></i> ${regionName}
+                    </span>
+                    <span class="history-time">${formatTimeAgo(item.timestamp)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
-// Update all profile avatars
-function updateProfileAvatars() {
-    const profilePicture = localStorage.getItem('profile_picture');
+// Load saved settings into the form
+function loadSavedSettings() {
+    const savedTheme = localStorage.getItem('app_theme') || 'light';
+    const savedRegion = localStorage.getItem('app_region') || 'KE';
     
-    // Update large profile avatar
-    const largeAvatar = document.getElementById('profileAvatarLarge');
-    if (largeAvatar && profilePicture) {
-        largeAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+    const themeSelector = document.getElementById('themeSetting');
+    const regionSelector = document.getElementById('regionSetting');
+    
+    if (themeSelector) {
+        themeSelector.value = savedTheme;
     }
     
-    // Update sidebar avatar
-    const userAvatar = document.querySelector('.user-avatar');
-    if (userAvatar && profilePicture) {
-        userAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
-    }
-    
-    // Update modal avatar if exists
-    const modalAvatar = document.getElementById('profileAvatarModal');
-    if (modalAvatar && profilePicture) {
-        modalAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+    if (regionSelector) {
+        regionSelector.value = savedRegion;
     }
 }
 
-// Upload Profile Picture
-function uploadProfilePicture() {
-    const fileInput = document.getElementById('profilePictureInput');
-    fileInput.click();
-}
-
-// Open Profile Modal
-function openProfileModal() {
-    const modal = document.getElementById('profileModal');
-    const overlay = document.getElementById('modalOverlay');
+// Save settings
+function saveSettings() {
+    const theme = document.getElementById('themeSetting').value;
+    const region = document.getElementById('regionSetting').value;
     
-    // Load profile data into modal
-    const userName = localStorage.getItem('user_name') || 'User';
-    const userEmail = localStorage.getItem('user_email') || 'user@example.com';
-    const memberSince = localStorage.getItem('member_since') || new Date().toISOString().split('T')[0];
-    const searchHistory = JSON.parse(localStorage.getItem('search_history') || '[]');
+    // Save settings
+    localStorage.setItem('app_theme', theme);
+    localStorage.setItem('app_region', region);
     
-    document.getElementById('modalProfileName').textContent = userName;
-    document.getElementById('modalProfileEmail').textContent = userEmail;
-    document.getElementById('modalMemberSince').textContent = new Date(memberSince).toLocaleDateString();
-    document.getElementById('modalSearchCount').textContent = searchHistory.length;
-    
-    // Load profile picture
-    const profilePicture = localStorage.getItem('profile_picture');
-    const profileAvatarModal = document.getElementById('profileAvatarModal');
-    if (profilePicture && profileAvatarModal) {
-        profileAvatarModal.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+    // Apply theme immediately
+    if (window.applyTheme) {
+        window.applyTheme(theme);
     }
     
-    modal.classList.add('active');
-    overlay.classList.add('active');
-}
-
-function closeProfileModal() {
-    const modal = document.getElementById('profileModal');
-    const overlay = document.getElementById('modalOverlay');
-    modal.classList.remove('active');
-    overlay.classList.remove('active');
-}
-
-function openContactsModal() {
-    const modal = document.getElementById('contactsModal');
-    const overlay = document.getElementById('modalOverlay');
+    // Update dashboard region if on dashboard
+    const dashboardRegion = document.getElementById('dashboardRegion');
+    if (dashboardRegion && region !== 'KE') {
+        dashboardRegion.value = region;
+    }
     
-    modal.classList.add('active');
-    overlay.classList.add('active');
-}
-
-function closeContactsModal() {
-    const modal = document.getElementById('contactsModal');
-    const overlay = document.getElementById('modalOverlay');
-    modal.classList.remove('active');
-    overlay.classList.remove('active');
-}
-
-function closeAllModals() {
-    closeProfileModal();
-    closeContactsModal();
+    showToast('Settings saved successfully', 'success');
 }
 
 // Logout function
@@ -1968,23 +2121,15 @@ function logout() {
     window.location.href = 'index.html';
 }
 
-// Load user info
-function loadUserInfo() {
-    const userName = localStorage.getItem('user_name') || 'User';
-    const userEmail = localStorage.getItem('user_email') || 'user@example.com';
-    
-    // Update sidebar
-    const sidebarUserName = document.getElementById('sidebarUserName');
-    const sidebarUserEmail = document.getElementById('sidebarUserEmail');
-    if (sidebarUserName) sidebarUserName.textContent = userName;
-    if (sidebarUserEmail) sidebarUserEmail.textContent = userEmail;
-    
-    // Update profile picture
-    updateProfileAvatars();
-}
-
 // Initialize on load
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is logged in
+    const token = localStorage.getItem('jwt_token');
+    if (!token) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
     // Set current date
     const now = new Date();
     const dateElement = document.getElementById('currentDate');
@@ -1998,50 +2143,78 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Load initial data
+    loadProfileData();
     loadSearchHistory();
     initMarketDirectory();
+    
+    // Initialize charts
+    if (window.initChart) {
+        window.initChart();
+    }
+    
+    // Load saved settings
+    loadSavedSettings();
+    
+    // Set up auto-refresh for date
+    setInterval(() => {
+        const now = new Date();
+        const dateElement = document.getElementById('currentDate');
+        if (dateElement) {
+            dateElement.textContent = now.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            }) + ' • ' + now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+    }, 60000);
 });
 
 // Expose functions globally
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
-window.searchTrends = searchTrends;
+window.analyzeDashboardProduct = analyzeDashboardProduct;
+window.quickAnalyze = quickAnalyze;
+window.analyzeWithRegion = analyzeWithRegion;
+window.performSearch = performSearch;
 window.searchFromAdvanced = searchFromAdvanced;
 window.quickSearch = quickSearch;
-window.performSearch = performSearch;
-window.performAdvancedSearch = performAdvancedSearch;
-window.applyFilters = applyFilters;
-window.compareTrends = compareTrends;
-window.filterMarkets = filterMarkets;
-window.analyzeMarket = analyzeMarket;
-window.viewMarketDetails = viewMarketDetails;
-window.showSettingsTab = showSettingsTab;
-window.saveSettings = saveSettings;
-window.changeTheme = changeTheme;
-window.showLoading = showLoading;
-window.hideLoading = hideLoading;
-window.showToast = showToast;
+window.updateChartRange = updateChartRange;
 window.logout = logout;
-window.loadUserInfo = loadUserInfo;
+window.loadUserInfo = loadProfileData;
 window.initMarketDirectory = initMarketDirectory;
 window.loadSearchHistory = loadSearchHistory;
 window.loadProfileData = loadProfileData;
-window.loadInsights = loadInsights;
 window.loadSavedSettings = loadSavedSettings;
+window.uploadProfilePicture = uploadProfilePicture;
+window.handleProfilePictureUpload = handleProfilePictureUpload;
+window.updateProfileAvatars = updateProfileAvatars;
+window.saveSettings = saveSettings;
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.showToast = showToast;
+
+// YOUR ORIGINAL FUNCTIONS - EXPOSED
+window.searchTrends = searchTrends;
+window.compareTrends = compareTrends;
+window.performAdvancedSearch = performAdvancedSearch;
+window.viewDetailedAnalysis = viewDetailedAnalysis;
+window.goBackToSearch = goBackToSearch;
+window.downloadSearchReportPDF = downloadSearchReportPDF;
 window.showEditProfile = showEditProfile;
 window.saveEditProfile = saveEditProfile;
 window.changePassword = changePassword;
 window.saveNewPassword = saveNewPassword;
 window.exportUserDataPDF = exportUserDataPDF;
+window.deleteAccountData = deleteAccountData;
 window.closeModal = closeModal;
-window.uploadProfilePicture = uploadProfilePicture;
-window.handleProfilePictureUpload = handleProfilePictureUpload;
-window.openProfileModal = openProfileModal;
-window.closeProfileModal = closeProfileModal;
-window.openContactsModal = openContactsModal;
-window.closeContactsModal = closeContactsModal;
-window.closeAllModals = closeAllModals;
-window.viewDetailedAnalysis = viewDetailedAnalysis;
-window.goBackToSearch = goBackToSearch;
-window.downloadSearchReportPDF = downloadSearchReportPDF;
-window.updateChartRange = updateChartRange;
+window.showSettingsTab = showSettingsTab;
+window.loadInsights = loadInsights;
+window.updatePredictionInsights = updatePredictionInsights;
+window.applyFilters = applyFilters;
+window.filterMarkets = filterMarkets;
+window.analyzeMarket = analyzeMarket;
+window.viewMarketDetails = viewMarketDetails;
