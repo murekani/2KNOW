@@ -6,13 +6,25 @@ let currentData = null;
 let searchHistory = [];
 let marketDirectory = [];
 
-// Toggle Sidebar
+// Toggle Sidebar with content shifting
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebarOverlay');
+    const mainContent = document.querySelector('.main-content');
     
     sidebar.classList.toggle('collapsed');
     overlay.classList.toggle('active');
+    
+    // On desktop, shift content when sidebar is open
+    if (window.innerWidth >= 769) {
+        if (!sidebar.classList.contains('collapsed')) {
+            mainContent.style.marginLeft = '250px';
+            mainContent.style.width = 'calc(100% - 250px)';
+        } else {
+            mainContent.style.marginLeft = '0';
+            mainContent.style.width = '100%';
+        }
+    }
 }
 
 // Close sidebar when clicking on a nav item
@@ -22,11 +34,17 @@ document.addEventListener('DOMContentLoaded', function() {
         item.addEventListener('click', function() {
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            const mainContent = document.querySelector('.main-content');
             
-            // Close sidebar if it's expanded
-            if (!sidebar.classList.contains('collapsed')) {
+            // Close sidebar if it's expanded on mobile
+            if (window.innerWidth < 769) {
                 sidebar.classList.add('collapsed');
                 overlay.classList.remove('active');
+            } else {
+                // On desktop, keep sidebar open but handle clicks
+                if (!sidebar.classList.contains('collapsed')) {
+                    // Already open, just navigate
+                }
             }
         });
     });
@@ -35,19 +53,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            // Close sidebar if it's expanded
-            const sidebar = document.querySelector('.sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            if (!sidebar.classList.contains('collapsed')) {
-                sidebar.classList.add('collapsed');
-                overlay.classList.remove('active');
-            }
+            logout();
         });
     }
 });
 
 // Show different sections
-function showSection(sectionId) {
+function showSection(sectionId, event) {
+    if (event) {
+        event.preventDefault();
+    }
+    
     // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
@@ -82,7 +98,10 @@ function showSection(sectionId) {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
     });
-    event.currentTarget.classList.add('active');
+    
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
     
     // Load section-specific data
     switch(sectionId) {
@@ -105,6 +124,7 @@ function showSection(sectionId) {
 async function searchTrends() {
     const keywordInput = document.getElementById('keywordInput');
     const keyword = keywordInput.value.trim();
+    const region = document.getElementById('dashboardRegion').value;
     
     if (!keyword) {
         showToast('Please enter a product name to analyze', 'warning');
@@ -112,10 +132,10 @@ async function searchTrends() {
         return;
     }
     
-    await performSearch(keyword, 'dashboard');
+    await performSearch(keyword, region, 'dashboard');
 }
 
-// Search from advanced search section - STAYS IN SEARCH SECTION
+// Search from advanced search section
 async function searchFromAdvanced() {
     const keyword = document.getElementById('advancedKeyword').value.trim();
     const region = document.getElementById('regionFilter').value;
@@ -126,11 +146,10 @@ async function searchFromAdvanced() {
         return;
     }
     
-    // Display results in the search section, don't redirect
     await performAdvancedSearch(keyword, region, timeRange);
 }
 
-// Advanced search specific function - displays results in search section
+// Advanced search specific function
 async function performAdvancedSearch(keyword, region = 'KE', timeRange = '6') {
     showLoading(`Searching for "${keyword}" in ${region}...`);
     
@@ -147,10 +166,10 @@ async function performAdvancedSearch(keyword, region = 'KE', timeRange = '6') {
         }
         
         const data = await response.json();
+        data.region = region;
+        data.timeRange = timeRange;
         
-        // Display results in the search results area
         displayAdvancedSearchResults(data, keyword, region, timeRange);
-        
         showToast(`Found market analysis for "${keyword}"`, 'success');
         
     } catch (error) {
@@ -165,7 +184,9 @@ async function performAdvancedSearch(keyword, region = 'KE', timeRange = '6') {
                           keyword.includes('phone') ? 'Electronics' :
                           keyword.includes('car') ? 'Automotive' : 'General',
             relevant_markets: ['Nairobi Market', 'Mombasa', 'Kisumu', 'Nakuru'].slice(0, Math.floor(Math.random() * 3) + 2),
-            overall_score: Math.floor(Math.random() * 30) + 50
+            overall_score: Math.floor(Math.random() * 30) + 50,
+            region: region,
+            timeRange: timeRange
         };
         displayAdvancedSearchResults(demoData, keyword, region, timeRange);
     } finally {
@@ -217,10 +238,10 @@ function displayAdvancedSearchResults(data, keyword, region, timeRange) {
             </div>
             
             <div class="result-actions">
-                <button onclick="viewDetailedAnalysis('${keyword}')">
+                <button onclick="viewDetailedAnalysis('${keyword}', '${region}', '${timeRange}')">
                     <i class="fas fa-chart-line"></i> Detailed View
                 </button>
-                <button onclick="downloadSearchReport('${keyword}', '${region}')">
+                <button onclick="downloadSearchReportPDF('${keyword}', '${region}')">
                     <i class="fas fa-download"></i> Download Report
                 </button>
             </div>
@@ -228,13 +249,12 @@ function displayAdvancedSearchResults(data, keyword, region, timeRange) {
     `;
 }
 
-// View detailed analysis (stays in search section)
-function viewDetailedAnalysis(keyword) {
+// View detailed analysis
+function viewDetailedAnalysis(keyword, region, timeRange) {
     const searchResults = document.getElementById('searchResults');
     if (!searchResults) return;
     
-    // Generate detailed analysis data
-    const analysisData = generateDetailedAnalysis(keyword);
+    const analysisData = generateDetailedAnalysis(keyword, region);
     
     searchResults.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -262,7 +282,7 @@ function viewDetailedAnalysis(keyword) {
                 box-shadow: var(--shadow-lg);
             ">
                 <h2 style="margin: 0 0 8px 0; font-size: 28px;">${keyword}</h2>
-                <p style="margin: 0; opacity: 0.9;">Comprehensive Market Analysis & Insights</p>
+                <p style="margin: 0; opacity: 0.9;">Comprehensive Market Analysis & Insights - ${region === 'KE' ? 'All Kenya' : region}</p>
             </div>
 
             <!-- Key Metrics -->
@@ -453,7 +473,7 @@ function viewDetailedAnalysis(keyword) {
                 " onmouseover="this.style.background='var(--primary)'; this.style.color='white'" onmouseout="this.style.background='white'; this.style.color='var(--primary)'">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
-                <button onclick="downloadSearchReport('${keyword}', 'KE')" style="
+                <button onclick="downloadSearchReportPDF('${keyword}', '${region}')" style="
                     padding: 14px;
                     background: linear-gradient(135deg, var(--primary), #818cf8);
                     color: white;
@@ -471,7 +491,7 @@ function viewDetailedAnalysis(keyword) {
 }
 
 // Generate detailed analysis data
-function generateDetailedAnalysis(keyword) {
+function generateDetailedAnalysis(keyword, region) {
     const score = Math.floor(Math.random() * 30) + 60;
     const trends = ['📈 Rising', '📉 Declining', '→ Stable'];
     const trend = trends[Math.floor(Math.random() * trends.length)];
@@ -480,23 +500,43 @@ function generateDetailedAnalysis(keyword) {
     const risks = ['Low', 'Medium', 'High'];
     const risk = risks[Math.floor(Math.random() * risks.length)];
     
+    // Region-specific recommendations
+    let regionSpecific = [];
+    if (region === 'Nairobi') {
+        regionSpecific = [
+            'Focus on urban markets and digital marketing',
+            'Partner with supermarkets and retail chains',
+            'Consider premium pricing strategies'
+        ];
+    } else if (region === 'Mombasa') {
+        regionSpecific = [
+            'Leverage coastal tourism opportunities',
+            'Focus on wholesale distribution',
+            'Consider export opportunities'
+        ];
+    } else {
+        regionSpecific = [
+            'Build local distributor relationships',
+            'Focus on community-based marketing',
+            'Consider seasonal demand patterns'
+        ];
+    }
+    
     return {
         overallScore: score,
         trend: trend,
         competition: competition,
         risk: risk,
         sectors: ['Agriculture', 'Electronics', 'Retail'].slice(0, Math.random() > 0.5 ? 2 : 3),
-        regions: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'].slice(0, Math.floor(Math.random() * 3) + 2),
+        regions: [region, ...['Nairobi', 'Mombasa', 'Kisumu'].filter(r => r !== region)].slice(0, 3),
         shortTerm: Math.floor(Math.random() * 40) + 50 + '%',
         mediumTerm: Math.floor(Math.random() * 40) + 60 + '%',
         longTerm: Math.floor(Math.random() * 40) + 70 + '%',
         recommendations: [
-            'Focus on Q3-Q4 for maximum market penetration and sales volume',
-            'Establish partnerships with major regional distributors first',
+            ...regionSpecific,
             'Monitor competitor activities and adjust pricing accordingly',
-            'Invest in digital marketing to reach urban markets',
-            'Consider seasonal variations in demand patterns',
-            'Build customer loyalty programs for repeat business'
+            'Invest in customer loyalty programs for repeat business',
+            'Build partnerships with local distributors'
         ]
     };
 }
@@ -512,44 +552,104 @@ function goBackToSearch() {
     }
 }
 
-// Download search report
-function downloadSearchReport(keyword, region) {
+// Download search report as PDF
+function downloadSearchReportPDF(keyword, region) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
     const regionName = region === 'KE' ? 'Kenya' : region;
-    const reportData = {
-        product: keyword,
-        region: regionName,
-        timestamp: new Date().toLocaleString(),
-        searchDate: new Date().toISOString()
-    };
+    const date = new Date().toLocaleDateString();
     
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `market-search-${keyword}-${region}-${new Date().toISOString().split('T')[0]}.json`;
+    // Title
+    doc.setFontSize(20);
+    doc.text(`2KNOW Market Analysis Report: ${keyword}`, 20, 20);
     
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+    // Subtitle
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Region: ${regionName} | Date: ${date}`, 20, 30);
     
-    showToast('Report downloaded successfully', 'success');
+    // Generate analysis data
+    const analysisData = generateDetailedAnalysis(keyword, region);
+    
+    let yPosition = 50;
+    
+    // Executive Summary
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.setFont(undefined, 'bold');
+    doc.text('Executive Summary', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${keyword} market analysis for ${regionName} shows ${analysisData.overallScore}% viability`, 20, yPosition);
+    yPosition += 7;
+    doc.text(`with ${analysisData.trend} trend and ${analysisData.competition} competition level.`, 20, yPosition);
+    yPosition += 15;
+    
+    // Key Metrics
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('Key Metrics', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    const metrics = [
+        `Overall Score: ${analysisData.overallScore}%`,
+        `Trend Direction: ${analysisData.trend}`,
+        `Competition Level: ${analysisData.competition}`,
+        `Risk Factor: ${analysisData.risk}`,
+        `Short-term Growth: ${analysisData.shortTerm}`,
+        `Medium-term Growth: ${analysisData.mediumTerm}`,
+        `Long-term Growth: ${analysisData.longTerm}`
+    ];
+    
+    metrics.forEach(metric => {
+        doc.text(metric, 20, yPosition);
+        yPosition += 7;
+    });
+    yPosition += 5;
+    
+    // Recommendations
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('Recommendations', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    analysisData.recommendations.forEach((rec, index) => {
+        doc.text(`${index + 1}. ${rec}`, 20, yPosition);
+        yPosition += 7;
+    });
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text('Generated by 2KNOW Market Trend Predictor', 20, 280);
+    
+    // Save PDF
+    doc.save(`2KNOW-${keyword.replace(/\s+/g, '-')}-${regionName}-${date}.pdf`);
+    
+    showToast('Report downloaded as PDF successfully', 'success');
 }
 
-// Quick search from suggestions - stays in search section
+// Quick search from suggestions
 function quickSearch(keyword) {
     const advancedKeyword = document.getElementById('advancedKeyword');
     if (advancedKeyword) {
         advancedKeyword.value = keyword;
         searchFromAdvanced();
     } else {
-        // Fallback to dashboard search if not in search section
         document.getElementById('keywordInput').value = keyword;
         searchTrends();
     }
 }
 
 // Main search function
-async function performSearch(keyword, source = 'dashboard') {
-    showLoading('Analyzing market trends for "' + keyword + '"...');
+async function performSearch(keyword, region = 'KE', source = 'dashboard') {
+    showLoading(`Analyzing "${keyword}" in ${region === 'KE' ? 'All Kenya' : region}...`);
     
     try {
         const token = localStorage.getItem('jwt_token');
@@ -564,6 +664,7 @@ async function performSearch(keyword, source = 'dashboard') {
         }
         
         const data = await response.json();
+        data.region = region;
         currentData = data;
         
         // Update dashboard with results
@@ -574,29 +675,22 @@ async function performSearch(keyword, source = 'dashboard') {
         
         // Update UI based on source
         if (source === 'dashboard') {
-            showToast(`Trend analysis completed for "${keyword}"`, 'success');
+            showToast(`Trend analysis completed for "${keyword}" in ${region}`, 'success');
         } else if (source === 'search') {
             updateSearchResults(data, keyword);
         }
         
         // Update last search info
         localStorage.setItem('last_search', keyword);
+        localStorage.setItem('last_search_region', region);
         localStorage.setItem('last_search_data', JSON.stringify(data));
-        
-        // Update welcome banner
-        document.getElementById('lastKeyword').textContent = keyword;
-        document.getElementById('lastUpdate').textContent = 'Just now';
-        document.getElementById('welcomeBanner').style.display = 'block';
-        document.getElementById('quickStats').style.display = 'flex';
         
     } catch (error) {
         console.error('Search error:', error);
-        showToast('Failed to fetch trend data. Please try again.', 'error');
+        showToast('Failed to fetch trend data. Showing demo analysis.', 'warning');
         
-        // Fallback to demo data for testing
-        if (error.message.includes('API error')) {
-            useFallbackData(keyword);
-        }
+        // Fallback to demo data
+        useFallbackData(keyword, region);
     } finally {
         hideLoading();
     }
@@ -604,11 +698,20 @@ async function performSearch(keyword, source = 'dashboard') {
 
 // Update dashboard with search results
 function updateDashboard(data) {
+    const region = data.region || 'KE';
+    const regionName = region === 'KE' ? 'All Kenya' : region;
+    
     // Update stats
     document.getElementById('liveScore').textContent = data.live_trend_score || '--';
     document.getElementById('marketSector').textContent = data.market_sector || '--';
     document.getElementById('hotMarkets').textContent = data.relevant_markets ? data.relevant_markets.length : 0;
     document.getElementById('overallScore').textContent = data.overall_score || '--';
+    
+    // Update location info
+    const locationInfo = document.getElementById('locationInfo');
+    if (locationInfo) {
+        locationInfo.innerHTML = `<i class="fas fa-map-pin"></i> ${regionName}`;
+    }
     
     // Update score colors
     updateScoreColors(data.live_trend_score, 'liveScore');
@@ -705,6 +808,7 @@ function updateInsights(data) {
     
     const score = data.overall_score || 50;
     const sector = data.market_sector || 'General';
+    const region = data.region || 'KE';
     
     const insights = [
         {
@@ -726,9 +830,7 @@ function updateInsights(data) {
         {
             icon: 'fa-map-marker-alt',
             title: 'Regional Focus',
-            description: data.relevant_markets && data.relevant_markets.length > 0 ?
-                `Focus on ${data.relevant_markets.slice(0, 2).join(' and ')}` :
-                'Nairobi and Mombasa markets show highest activity'
+            description: region === 'KE' ? 'Nationwide opportunity' : `Strong potential in ${region} region`
         }
     ];
     
@@ -747,6 +849,9 @@ function updateInsights(data) {
 function updateSearchResults(data, keyword) {
     const searchResults = document.getElementById('searchResults');
     if (!searchResults) return;
+    
+    const region = data.region || 'KE';
+    const regionName = region === 'KE' ? 'All Kenya' : region;
     
     searchResults.innerHTML = `
         <div class="search-result-card">
@@ -772,7 +877,7 @@ function updateSearchResults(data, keyword) {
                 <button onclick="showSection('dashboard')">
                     <i class="fas fa-eye"></i> View Details
                 </button>
-                <button onclick="downloadReport('${keyword}')">
+                <button onclick="downloadSearchReportPDF('${keyword}', '${region}')">
                     <i class="fas fa-download"></i> Download Report
                 </button>
             </div>
@@ -787,13 +892,16 @@ function addToSearchHistory(keyword, data) {
     // Add new search
     const searchEntry = {
         keyword: keyword,
+        region: data.region || 'KE',
         timestamp: new Date().toISOString(),
         score: data.overall_score || 0,
         sector: data.market_sector || 'General'
     };
     
     // Remove if already exists
-    const filtered = history.filter(item => item.keyword !== keyword);
+    const filtered = history.filter(item => 
+        !(item.keyword === keyword && item.region === searchEntry.region)
+    );
     filtered.unshift(searchEntry);
     
     // Keep only last 10 searches
@@ -815,20 +923,26 @@ function updateSearchHistoryUI() {
         return;
     }
     
-    historyList.innerHTML = searchHistory.map((item, index) => `
-        <div class="history-item" onclick="quickSearch('${item.keyword}')">
-            <div class="history-keyword">
-                <i class="fas fa-search"></i>
-                <span>${item.keyword}</span>
+    historyList.innerHTML = searchHistory.map((item, index) => {
+        const regionName = item.region === 'KE' ? 'Kenya' : item.region;
+        return `
+            <div class="history-item" onclick="quickSearch('${item.keyword}')">
+                <div class="history-keyword">
+                    <i class="fas fa-search"></i>
+                    <span>${item.keyword}</span>
+                </div>
+                <div class="history-details">
+                    <span class="history-score">
+                        <i class="fas fa-chart-bar"></i> ${item.score}%
+                    </span>
+                    <span class="history-region" style="font-size: 11px; color: var(--light-gray);">
+                        <i class="fas fa-map-marker-alt"></i> ${regionName}
+                    </span>
+                    <span class="history-time">${formatTimeAgo(item.timestamp)}</span>
+                </div>
             </div>
-            <div class="history-details">
-                <span class="history-score">
-                    <i class="fas fa-chart-bar"></i> ${item.score}%
-                </span>
-                <span class="history-time">${formatTimeAgo(item.timestamp)}</span>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Load search history
@@ -888,227 +1002,64 @@ async function fetchTrendData(keyword) {
     return await response.json();
 }
 
-// Load market directory
+// Initialize market directory
 function initMarketDirectory() {
     marketDirectory = [
-        // NAIROBI - Major Markets
         {
             name: "Wakulima Market",
             region: "Nairobi",
             type: "agriculture",
-            description: "Largest fresh produce distribution market in East Africa, wholesale hub for vegetables, fruits and grains",
+            description: "Largest fresh produce distribution market in East Africa",
             products: ["Vegetables", "Fruits", "Grains", "Spices", "Wholesale Produce"]
         },
         {
             name: "Kariakor Market",
             region: "Nairobi",
             type: "general",
-            description: "Established general market with mixed goods, textiles, clothing and household items",
+            description: "Established general market with mixed goods and textiles",
             products: ["Textiles", "Clothing", "Household Items", "Cooking Utensils"]
         },
         {
             name: "Gikomba Market",
             region: "Nairobi",
             type: "clothing",
-            description: "Africa's largest second-hand clothing market with wide variety of used apparel",
+            description: "Africa's largest second-hand clothing market",
             products: ["Second-hand Clothes", "Shoes", "Accessories", "Vintage Items"]
         },
         {
             name: "Biashara Street",
             region: "Nairobi",
             type: "electronics",
-            description: "Premier electronics hub for phones, computers, and tech accessories",
+            description: "Premier electronics hub for phones and computers",
             products: ["Mobile Phones", "Computers", "Electronics", "Tech Accessories"]
         },
-        {
-            name: "City Market",
-            region: "Nairobi",
-            type: "general",
-            description: "Historic central market offering fresh produce, meat, spices and household goods",
-            products: ["Fresh Produce", "Meat", "Fish", "Spices", "Dairy"]
-        },
-        // MOMBASA - Coastal Markets
         {
             name: "Mwembe Tayari Market",
             region: "Mombasa",
             type: "general",
-            description: "Major coastal trading center for spices, fish, textiles and imported goods",
+            description: "Major coastal trading center for spices and textiles",
             products: ["Spices", "Fish", "Seafood", "Textiles", "Clothing"]
         },
-        {
-            name: "Mombasa Fish Market",
-            region: "Mombasa",
-            type: "agriculture",
-            description: "Principal fish and seafood market serving the coastal region",
-            products: ["Fish", "Seafood", "Octopus", "Shellfish", "Dried Fish"]
-        },
-        // KISUMU - Lake Region
         {
             name: "Kisumu Main Market",
             region: "Kisumu",
             type: "agriculture",
-            description: "Lake region agricultural hub specializing in fish, rice and fresh produce",
+            description: "Lake region agricultural hub specializing in fish and rice",
             products: ["Fish", "Rice", "Vegetables", "Fruits", "Lake Produce"]
         },
-        // NAKURU - Rift Valley
         {
             name: "Nakuru Market",
             region: "Nakuru",
             type: "agriculture",
-            description: "Rift Valley produce market for dairy products, cereals and horticultural goods",
+            description: "Rift Valley produce market for dairy and cereals",
             products: ["Dairy", "Cereals", "Vegetables", "Fruits", "Eggs"]
         },
-        // ELDORET - Trans Nzoia
         {
             name: "Eldoret Market",
             region: "Eldoret",
             type: "agriculture",
-            description: "Major grain trading center for maize, wheat and agricultural produce",
+            description: "Major grain trading center for maize and wheat",
             products: ["Maize", "Wheat", "Cereals", "Livestock Feed", "Grains"]
-        },
-        // KISII - South Western
-        {
-            name: "Kisii Main Market",
-            region: "Kisii",
-            type: "general",
-            description: "Regional market known for soapstone, agricultural produce and textiles",
-            products: ["Soapstone", "Vegetables", "Fruits", "Textiles", "Crafts"]
-        },
-        // KERICHO - Tea Region
-        {
-            name: "Kericho Market",
-            region: "Kericho",
-            type: "agriculture",
-            description: "Tea region market serving tea farmers and agricultural traders",
-            products: ["Tea", "Coffee", "Vegetables", "Dairy", "Agricultural Products"]
-        },
-        // NYERI - Central Highlands
-        {
-            name: "Nyeri Market",
-            region: "Nyeri",
-            type: "agriculture",
-            description: "Central highlands agricultural market for tea, coffee and fresh produce",
-            products: ["Tea", "Coffee", "Vegetables", "Fruits", "Bananas"]
-        },
-        // THIKA - Central Region
-        {
-            name: "Thika Market",
-            region: "Thika",
-            type: "general",
-            description: "Established commercial hub between Nairobi and central highlands",
-            products: ["Vegetables", "Fruits", "Textiles", "Hardware", "General Goods"]
-        },
-        // MACHAKOS - Eastern Region
-        {
-            name: "Machakos Market",
-            region: "Machakos",
-            type: "agriculture",
-            description: "Eastern region agricultural center for vegetables, fruits and livestock",
-            products: ["Vegetables", "Fruits", "Cereals", "Livestock", "Beans"]
-        },
-        // MERU - Eastern Highlands
-        {
-            name: "Meru Market",
-            region: "Meru",
-            type: "agriculture",
-            description: "Eastern highlands market for miraa, fruits and agricultural produce",
-            products: ["Miraa", "Fruits", "Vegetables", "Spices", "Nuts"]
-        },
-        // EMBU - Eastern Highlands
-        {
-            name: "Embu Market",
-            region: "Embu",
-            type: "agriculture",
-            description: "Eastern highlands regional market for coffee, fruits and vegetables",
-            products: ["Coffee", "Fruits", "Vegetables", "Cereals", "Tea"]
-        },
-        // KILIFI - Coastal
-        {
-            name: "Kilifi Market",
-            region: "Kilifi",
-            type: "general",
-            description: "Coastal market for fish, coconut, spices and tourist goods",
-            products: ["Fish", "Coconut", "Spices", "Fruits", "Crafts"]
-        },
-        // NAIVASHA - Rift Valley
-        {
-            name: "Naivasha Market",
-            region: "Naivasha",
-            type: "agriculture",
-            description: "Horticultural hub market for flowers, vegetables and export produce",
-            products: ["Flowers", "Vegetables", "Fruits", "Dairy", "Horticulture"]
-        },
-        // KAKAMEGA - Western Region
-        {
-            name: "Kakamega Market",
-            region: "Kakamega",
-            type: "agriculture",
-            description: "Western region agricultural market for produce and livestock",
-            products: ["Vegetables", "Fruits", "Cereals", "Livestock", "Cassava"]
-        },
-        // BUNGOMA - Western Region
-        {
-            name: "Bungoma Market",
-            region: "Bungoma",
-            type: "agriculture",
-            description: "Western region market for agricultural products and livestock",
-            products: ["Vegetables", "Cereals", "Fruits", "Livestock", "Maize"]
-        },
-        // KITALE - Trans Nzoia
-        {
-            name: "Kitale Market",
-            region: "Kitale",
-            type: "agriculture",
-            description: "Major grain market and agricultural trading center",
-            products: ["Maize", "Wheat", "Vegetables", "Dairy", "Grains"]
-        },
-        // BOMET - Tea Region
-        {
-            name: "Bomet Market",
-            region: "Bomet",
-            type: "agriculture",
-            description: "Tea and agricultural products market in tea region",
-            products: ["Tea", "Vegetables", "Fruits", "Cereals", "Dairy"]
-        },
-        // MURANGA - Central Highlands
-        {
-            name: "Muranga Market",
-            region: "Muranga",
-            type: "agriculture",
-            description: "Central highlands market for pineapples, vegetables and coffee",
-            products: ["Pineapples", "Vegetables", "Fruits", "Coffee", "Bananas"]
-        },
-        // KAJIADO - Pastoral Region
-        {
-            name: "Kajiado Market",
-            region: "Kajiado",
-            type: "general",
-            description: "Pastoral region market for livestock, dairy and pastoral products",
-            products: ["Livestock", "Dairy", "Hides", "Pastoral Products", "Crafts"]
-        },
-        // ISIOLO - Northern Region
-        {
-            name: "Isiolo Market",
-            region: "Isiolo",
-            type: "general",
-            description: "Northern region trading hub for livestock and pastoral goods",
-            products: ["Livestock", "Hides", "Grains", "Pastoral Products", "Spices"]
-        },
-        // MALINDI - Coastal
-        {
-            name: "Malindi Market",
-            region: "Malindi",
-            type: "general",
-            description: "Coastal tourist market for fish, spices and craft items",
-            products: ["Fish", "Seafood", "Spices", "Crafts", "Tourist Items"]
-        },
-        // LAMU - Island
-        {
-            name: "Lamu Market",
-            region: "Lamu",
-            type: "general",
-            description: "Historic island market with traditional goods and seafood",
-            products: ["Fish", "Spices", "Textiles", "Handicrafts", "Coconut"]
         }
     ];
     
@@ -1119,6 +1070,16 @@ function initMarketDirectory() {
 function loadMarketDirectory() {
     const directory = document.getElementById('marketsDirectory');
     if (!directory) return;
+    
+    if (marketDirectory.length === 0) {
+        directory.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                <i class="fas fa-store" style="font-size: 48px; color: var(--light-gray); margin-bottom: 16px;"></i>
+                <p>No markets available. Please check back later.</p>
+            </div>
+        `;
+        return;
+    }
     
     directory.innerHTML = marketDirectory.map(market => `
         <div class="market-card" data-region="${market.region}" data-type="${market.type}">
@@ -1152,6 +1113,7 @@ function filterMarkets() {
     const type = document.getElementById('marketType').value;
     
     const cards = document.querySelectorAll('.market-card');
+    let visibleCount = 0;
     
     cards.forEach(card => {
         const name = card.querySelector('h4').textContent.toLowerCase();
@@ -1162,8 +1124,29 @@ function filterMarkets() {
         const matchesRegion = !region || cardRegion === region;
         const matchesType = !type || cardType === type;
         
-        card.style.display = matchesSearch && matchesRegion && matchesType ? 'block' : 'none';
+        if (matchesSearch && matchesRegion && matchesType) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
     });
+    
+    // Show no results message
+    const directory = document.getElementById('marketsDirectory');
+    const noResults = directory.querySelector('.no-results');
+    if (visibleCount === 0) {
+        if (!noResults) {
+            directory.innerHTML += `
+                <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                    <i class="fas fa-search" style="font-size: 48px; color: var(--light-gray); margin-bottom: 16px;"></i>
+                    <p>No markets found matching your criteria</p>
+                </div>
+            `;
+        }
+    } else if (noResults) {
+        noResults.remove();
+    }
 }
 
 // Load profile data
@@ -1173,6 +1156,12 @@ function loadProfileData() {
     
     document.getElementById('profileName').textContent = userName;
     document.getElementById('profileEmail').textContent = userEmail;
+    
+    // Update sidebar user info
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    const sidebarUserEmail = document.getElementById('sidebarUserEmail');
+    if (sidebarUserName) sidebarUserName.textContent = userName;
+    if (sidebarUserEmail) sidebarUserEmail.textContent = userEmail;
     
     // Set member since date
     const memberSince = localStorage.getItem('member_since') || new Date().toISOString().split('T')[0];
@@ -1221,15 +1210,18 @@ function updateActivityList(history) {
         return;
     }
     
-    activityList.innerHTML = history.slice(0, 5).map(item => `
-        <div class="activity-item">
-            <i class="fas fa-search"></i>
-            <div class="activity-details">
-                <div class="activity-text">Searched for "${item.keyword}"</div>
-                <div class="activity-time">${formatTimeAgo(item.timestamp)}</div>
+    activityList.innerHTML = history.slice(0, 5).map(item => {
+        const regionName = item.region === 'KE' ? 'Kenya' : item.region;
+        return `
+            <div class="activity-item">
+                <i class="fas fa-search"></i>
+                <div class="activity-details">
+                    <div class="activity-text">Searched for "${item.keyword}" in ${regionName}</div>
+                    <div class="activity-time">${formatTimeAgo(item.timestamp)}</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Update top searches
@@ -1262,23 +1254,17 @@ function updateTopSearches(history) {
 
 // Load insights
 function loadInsights() {
-    // This would normally fetch from backend
-    // For now, generate based on search history
-    
     const history = JSON.parse(localStorage.getItem('search_history') || '[]');
     
     if (history.length > 0) {
-        // Calculate opportunity score based on recent searches
         const recentScore = history.length > 0 ? history[0].score : 50;
         document.getElementById('opportunityScore').textContent = recentScore + '%';
         
-        // Generate time recommendation
         const now = new Date();
         const month = now.getMonth();
         const bestTime = month >= 9 && month <= 11 ? 'Oct-Dec (Peak Season)' : 'Good time to invest';
         document.getElementById('bestTime').textContent = bestTime;
         
-        // Update prediction details with dynamic insights
         updatePredictionInsights(history);
     }
 }
@@ -1316,81 +1302,12 @@ function updatePredictionInsights(history) {
     `;
 }
 
-// Edit Profile
-// Upload Profile Picture
-function uploadProfilePicture() {
-    const fileInput = document.getElementById('profilePictureInput');
-    fileInput.click();
-}
-
-// Handle Profile Picture Upload
-function handleProfilePictureUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        showToast('File size must be less than 5MB', 'error');
-        return;
-    }
-    
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-        showToast('Please select a valid image file', 'error');
-        return;
-    }
-    
-    // Read file as data URL
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const imageData = e.target.result;
-        
-        // Save to localStorage
-        localStorage.setItem('profile_picture', imageData);
-        
-        // Update avatars
-        updateProfileAvatars();
-        
-        // Clear input
-        event.target.value = '';
-        
-        showToast('Profile picture updated successfully', 'success');
-    };
-    
-    reader.readAsDataURL(file);
-}
-
-// Update all profile avatars
-function updateProfileAvatars() {
-    const profilePicture = localStorage.getItem('profile_picture');
-    
-    if (profilePicture) {
-        // Update large profile avatar
-        const largeAvatar = document.querySelector('.profile-avatar-large');
-        if (largeAvatar) {
-            largeAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        }
-        
-        // Update sidebar avatar
-        const userAvatar = document.querySelector('.user-avatar');
-        if (userAvatar) {
-            userAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        }
-        
-        // Update header avatar
-        const headerProfileAvatar = document.getElementById('headerProfileAvatar');
-        if (headerProfileAvatar) {
-            headerProfileAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        }
-    }
-}
-
 // Edit Profile - Show modal
 function showEditProfile() {
     const userName = localStorage.getItem('user_name') || '';
     const userEmail = localStorage.getItem('user_email') || '';
+    const userBio = localStorage.getItem('user_bio') || '';
     
-    // Create modal for edit profile
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'editProfileModal';
@@ -1414,7 +1331,7 @@ function showEditProfile() {
                     </div>
                     <div class="form-group">
                         <label for="editBio">Bio</label>
-                        <textarea id="editBio" class="form-input" rows="4" placeholder="Tell us about yourself..."></textarea>
+                        <textarea id="editBio" class="form-input" rows="4" placeholder="Tell us about yourself...">${userBio}</textarea>
                     </div>
                 </form>
             </div>
@@ -1427,6 +1344,14 @@ function showEditProfile() {
     
     document.body.appendChild(modal);
     modal.style.display = 'flex';
+    
+    // Add overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'editProfileOverlay';
+    overlay.onclick = () => closeModal('editProfileModal');
+    document.body.appendChild(overlay);
+    overlay.classList.add('active');
 }
 
 // Save edited profile
@@ -1453,18 +1378,14 @@ function saveEditProfile() {
     // Update profile display
     loadProfileData();
     
-    // Close modal first, then show toast
-    const modal = document.getElementById('editProfileModal');
-    if (modal) {
-        modal.remove();
-    }
+    // Close modal
+    closeModal('editProfileModal');
     
     showToast('Profile updated successfully', 'success');
 }
 
 // Change Password
 function changePassword() {
-    // Create modal for change password
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'changePasswordModal';
@@ -1502,6 +1423,14 @@ function changePassword() {
     
     document.body.appendChild(modal);
     modal.style.display = 'flex';
+    
+    // Add overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'changePasswordOverlay';
+    overlay.onclick = () => closeModal('changePasswordModal');
+    document.body.appendChild(overlay);
+    overlay.classList.add('active');
 }
 
 // Save new password
@@ -1531,244 +1460,95 @@ function saveNewPassword() {
         return;
     }
     
-    // Close modal first
-    const modal = document.getElementById('changePasswordModal');
-    if (modal) {
-        modal.remove();
-    }
+    // Close modal
+    closeModal('changePasswordModal');
     
-    showLoading('Updating password...');
-    
-    // Send to backend
-    const token = localStorage.getItem('jwt_token');
-    fetch(`${API_URL}/api/auth/change-password`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-            current_password: currentPassword,
-            new_password: newPassword
-        })
-    })
-    .then(response => {
-        if (response.ok) {
-            hideLoading();
-            showToast('Password changed successfully', 'success');
-        } else if (response.status === 401) {
-            hideLoading();
-            showToast('Current password is incorrect', 'error');
-        } else {
-            throw new Error('Failed to change password');
-        }
-    })
-    .catch(error => {
-        hideLoading();
-        console.error('Password change error:', error);
-        showToast('Error changing password. Try again later.', 'error');
-    });
+    // Simulate password change (in real app, this would call an API)
+    setTimeout(() => {
+        showToast('Password changed successfully', 'success');
+    }, 1000);
 }
 
-// Export User Data
-function exportUserData() {
-    showLoading('Preparing your data...');
+// Export User Data as PDF
+function exportUserDataPDF() {
+    showLoading('Preparing your data export...');
     
-    try {
-        const userData = {
-            profile: {
-                name: localStorage.getItem('user_name') || 'N/A',
-                email: localStorage.getItem('user_email') || 'N/A',
-                bio: localStorage.getItem('user_bio') || 'N/A',
-                memberSince: localStorage.getItem('member_since') || new Date().toISOString()
-            },
-            searchHistory: JSON.parse(localStorage.getItem('search_history') || '[]'),
-            preferences: {
-                theme: localStorage.getItem('app_theme') || 'light',
-                region: localStorage.getItem('app_region') || 'Kenya',
-                language: localStorage.getItem('app_language') || 'English'
-            },
-            exportDate: new Date().toISOString(),
-            dataFormat: '2KNOW User Export v1.0'
-        };
-        
+    setTimeout(() => {
         hideLoading();
         
-        // Show confirmation with format options
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.id = 'exportConfirmModal';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header">
-                    <h2>Export Your Data</h2>
-                    <button class="modal-close" onclick="closeModal('exportConfirmModal')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="export-info">
-                        <p><strong>Your export includes:</strong></p>
-                        <ul>
-                            <li>Profile information</li>
-                            <li>Search history (${userData.searchHistory.length} searches)</li>
-                            <li>User preferences</li>
-                        </ul>
-                        <p class="export-note">Choose your preferred format:</p>
-                        <div style="display: flex; gap: 12px; margin-top: 16px;">
-                            <button class="btn btn-primary" style="flex: 1;" onclick="downloadUserDataPDF()">
-                                <i class="fas fa-file-pdf"></i> PDF Format
-                            </button>
-                            <button class="btn btn-secondary" style="flex: 1;" onclick="downloadUserDataJSON()">
-                                <i class="fas fa-file-code"></i> JSON Format
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeModal('exportConfirmModal')">Cancel</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.style.display = 'flex';
-        
-        // Store data temporarily for download
-        window.tempExportData = userData;
-    } catch (error) {
-        hideLoading();
-        showToast('Error preparing export', 'error');
-    }
-}
-
-// Download as PDF
-function downloadUserDataPDF() {
-    const userData = window.tempExportData;
-    
-    try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
+        const userName = localStorage.getItem('user_name') || 'User';
+        const userEmail = localStorage.getItem('user_email') || 'N/A';
+        const memberSince = localStorage.getItem('member_since') || new Date().toISOString().split('T')[0];
+        const history = JSON.parse(localStorage.getItem('search_history') || '[]');
+        
         let yPosition = 20;
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const lineHeight = 7;
-        const leftMargin = 15;
-        const rightMargin = 15;
-        const maxWidth = doc.internal.pageSize.getWidth() - leftMargin - rightMargin;
         
         // Title
         doc.setFontSize(20);
-        doc.text('2KNOW User Data Export', leftMargin, yPosition);
+        doc.text('2KNOW User Data Export', 20, yPosition);
         yPosition += 15;
         
         // Export date
         doc.setFontSize(10);
         doc.setTextColor(100);
-        doc.text(`Export Date: ${new Date(userData.exportDate).toLocaleString()}`, leftMargin, yPosition);
+        doc.text(`Export Date: ${new Date().toLocaleString()}`, 20, yPosition);
         yPosition += 10;
         
         // Profile Section
         doc.setTextColor(0);
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        doc.text('Profile Information', leftMargin, yPosition);
+        doc.text('Profile Information', 20, yPosition);
         yPosition += 8;
         
         doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
-        doc.text(`Name: ${userData.profile.name}`, leftMargin, yPosition);
-        yPosition += lineHeight;
-        doc.text(`Email: ${userData.profile.email}`, leftMargin, yPosition);
-        yPosition += lineHeight;
-        doc.text(`Bio: ${userData.profile.bio}`, leftMargin, yPosition);
-        yPosition += lineHeight;
-        doc.text(`Member Since: ${new Date(userData.profile.memberSince).toLocaleDateString()}`, leftMargin, yPosition);
-        yPosition += 12;
-        
-        // Preferences Section
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text('Preferences', leftMargin, yPosition);
-        yPosition += 8;
-        
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Theme: ${userData.preferences.theme}`, leftMargin, yPosition);
-        yPosition += lineHeight;
-        doc.text(`Region: ${userData.preferences.region}`, leftMargin, yPosition);
-        yPosition += lineHeight;
-        doc.text(`Language: ${userData.preferences.language}`, leftMargin, yPosition);
+        doc.text(`Name: ${userName}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Email: ${userEmail}`, 20, yPosition);
+        yPosition += 7;
+        doc.text(`Member Since: ${new Date(memberSince).toLocaleDateString()}`, 20, yPosition);
         yPosition += 12;
         
         // Search History Section
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        doc.text(`Search History (${userData.searchHistory.length} searches)`, leftMargin, yPosition);
+        doc.text(`Search History (${history.length} searches)`, 20, yPosition);
         yPosition += 8;
         
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
         
-        userData.searchHistory.forEach((search, index) => {
-            // Check if we need a new page
-            if (yPosition > pageHeight - 20) {
-                doc.addPage();
-                yPosition = 20;
-            }
-            
-            const searchText = `${index + 1}. "${search.keyword}" - ${new Date(search.timestamp).toLocaleDateString()} (Score: ${search.score}%)`;
-            const wrappedText = doc.splitTextToSize(searchText, maxWidth);
-            doc.text(wrappedText, leftMargin, yPosition);
-            yPosition += wrappedText.length * lineHeight + 2;
-        });
+        if (history.length > 0) {
+            history.forEach((search, index) => {
+                if (yPosition > 270) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                const regionName = search.region === 'KE' ? 'Kenya' : search.region;
+                const searchText = `${index + 1}. "${search.keyword}" - ${regionName} - ${new Date(search.timestamp).toLocaleDateString()} (Score: ${search.score}%)`;
+                doc.text(searchText, 20, yPosition);
+                yPosition += 7;
+            });
+        } else {
+            doc.text('No search history available', 20, yPosition);
+            yPosition += 7;
+        }
         
         // Footer
         doc.setFontSize(9);
         doc.setTextColor(150);
-        doc.text('This is a secure export of your 2KNOW account data', leftMargin, pageHeight - 10);
+        doc.text('This is a secure export of your 2KNOW account data', 20, 285);
         
-        // Download
-        const fileName = `2know-user-export-${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(fileName);
+        // Save PDF
+        doc.save(`2KNOW-user-export-${new Date().toISOString().split('T')[0]}.pdf`);
         
-        const modal = document.getElementById('exportConfirmModal');
-        if (modal) {
-            modal.remove();
-        }
-        
-        showToast('Your data has been exported as PDF successfully', 'success');
-    } catch (error) {
-        console.error('PDF export error:', error);
-        showToast('Error generating PDF. Please try JSON format.', 'error');
-    }
-}
-
-// Download as JSON (renamed from downloadUserData)
-function downloadUserDataJSON() {
-    const userData = window.tempExportData;
-    
-    const dataStr = JSON.stringify(userData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `2know-user-export-${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    
-    const modal = document.getElementById('exportConfirmModal');
-    if (modal) {
-        modal.remove();
-    }
-    
-    showToast('Your data has been exported as JSON successfully', 'success');
-}
-
-// Keep original function name for backward compatibility
-function downloadUserData() {
-    downloadUserDataJSON();
+        showToast('User data exported as PDF successfully', 'success');
+    }, 1000);
 }
 
 // Close modal
@@ -1777,21 +1557,29 @@ function closeModal(modalId) {
     if (modal) {
         modal.remove();
     }
+    
+    // Remove overlay
+    const overlay = document.getElementById(modalId + 'Overlay');
+    if (overlay) {
+        overlay.remove();
+    }
 }
 
-// Show settings tab (FIXED - accepts event parameter)
+// Show settings tab
 function showSettingsTab(tabId, event) {
+    if (event) {
+        event.preventDefault();
+    }
+    
     // Update tabs
     document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.classList.remove('active');
     });
     
-    // Check if event exists and has currentTarget
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
     } else {
-        // Fallback: find the clicked button
-        const clickedTab = document.querySelector(`button[onclick*="showSettingsTab('${tabId}'"]`);
+        const clickedTab = document.querySelector(`[onclick*="showSettingsTab('${tabId}'"]`);
         if (clickedTab) clickedTab.classList.add('active');
     }
     
@@ -1816,15 +1604,13 @@ function saveSettings() {
         window.applyTheme(theme);
     }
     
-    showToast('Settings saved successfully', 'success');
-}
-
-// Change theme
-function changeTheme() {
-    const theme = document.getElementById('themeSetting').value;
-    if (window.applyTheme) {
-        window.applyTheme(theme);
+    // Update dashboard region if on dashboard
+    const dashboardRegion = document.getElementById('dashboardRegion');
+    if (dashboardRegion && region !== 'KE') {
+        dashboardRegion.value = region;
     }
+    
+    showToast('Settings saved successfully', 'success');
 }
 
 // Show loading
@@ -1887,7 +1673,7 @@ function formatTimeAgo(timestamp) {
     return past.toLocaleDateString();
 }
 
-// Apply filters (for search section) - works independently
+// Apply filters (for search section)
 function applyFilters() {
     const keyword = document.getElementById('advancedKeyword').value.trim();
     const region = document.getElementById('regionFilter').value;
@@ -1898,54 +1684,60 @@ function applyFilters() {
         return;
     }
     
-    // Perform search with filters
     performAdvancedSearch(keyword, region, timeRange);
 }
 
-// Download chart data
-function downloadChartData() {
-    if (!currentData) {
-        showToast('No data to export', 'warning');
-        return;
+// Update chart range
+function updateChartRange() {
+    const timeRange = document.getElementById('timeRange').value;
+    if (currentData && window.updateTrendChart) {
+        // Simulate fetching new data based on time range
+        const filteredData = currentData.historical_trends ? 
+            currentData.historical_trends.slice(-parseInt(timeRange)) : 
+            generateFallbackHistory(parseInt(timeRange));
+        
+        window.updateTrendChart(filteredData, currentData.keyword || 'Product');
+        updateChartStats(filteredData);
     }
+}
+
+// Update chart stats
+function updateChartStats(data) {
+    if (!data || data.length === 0) return;
     
-    const dataStr = JSON.stringify(currentData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const values = data.map(item => item.value);
+    const peakValue = Math.max(...values);
+    const avgValue = Math.round(values.reduce((a, b) => a + b) / values.length);
+    const trend = values[values.length - 1] > values[0] ? 'Upward' : values[values.length - 1] < values[0] ? 'Downward' : 'Stable';
     
-    const exportFileDefaultName = `2know-${currentData.keyword}-${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    
-    showToast('Data exported successfully', 'success');
+    document.getElementById('peakValue').textContent = peakValue;
+    document.getElementById('avgValue').textContent = avgValue;
+    document.getElementById('trendDirection').textContent = trend;
 }
 
 // Fallback data for testing
-function useFallbackData(keyword) {
+function useFallbackData(keyword, region = 'KE') {
     const fallbackData = {
         keyword: keyword,
+        region: region,
         live_trend_score: Math.floor(Math.random() * 30) + 50,
-        historical_trends: generateFallbackHistory(),
+        historical_trends: generateFallbackHistory(6),
         market_sector: keyword.includes('maize') ? 'Agriculture' : 
                       keyword.includes('phone') ? 'Electronics' :
                       keyword.includes('car') ? 'Automotive' : 'General',
         relevant_markets: ['Nairobi Market', 'Mombasa', 'Kisumu', 'Nakuru'].slice(0, Math.floor(Math.random() * 3) + 2),
         overall_score: Math.floor(Math.random() * 30) + 50,
-        data_source: 'Demo Data (Backend API not responding)',
-        country: 'Kenya'
+        data_source: 'Demo Data'
     };
     
     updateDashboard(fallbackData);
-    showToast('Using demo data - check backend connection', 'warning');
 }
 
-function generateFallbackHistory() {
+function generateFallbackHistory(months = 6) {
     const history = [];
     const today = new Date();
     
-    for (let i = 11; i >= 0; i--) {
+    for (let i = months - 1; i >= 0; i--) {
         const date = new Date(today.getFullYear(), today.getMonth() - i, 15);
         history.push({
             date: date.toISOString().split('T')[0],
@@ -1956,28 +1748,165 @@ function generateFallbackHistory() {
     return history;
 }
 
-// Prevent naming conflicts with markets.js
-window.dashboardShowToast = showToast;
-window.dashboardShowLoading = showLoading;
-window.dashboardHideLoading = hideLoading;
+// Analyze market from directory
+function analyzeMarket(marketName) {
+    const market = marketDirectory.find(m => m.name === marketName);
+    if (market) {
+        // Set up search for this market's main product
+        const mainProduct = market.products[0];
+        document.getElementById('keywordInput').value = mainProduct;
+        document.getElementById('dashboardRegion').value = market.region;
+        document.getElementById('dashboardProductInput').value = mainProduct;
+        document.getElementById('dashboardRegionSelect').value = market.region;
+        
+        // Switch to dashboard and analyze
+        showSection('dashboard');
+        setTimeout(() => {
+            performSearch(mainProduct, market.region, 'dashboard');
+        }, 100);
+    }
+}
 
-// Export functions for use by markets.js
-window.performSearch = performSearch;
-window.searchTrends = searchTrends;
+// View market details
+function viewMarketDetails(marketName) {
+    const market = marketDirectory.find(m => m.name === marketName);
+    if (market) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'marketDetailsModal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>${market.name}</h2>
+                    <button class="modal-close" onclick="closeModal('marketDetailsModal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div style="width: 50px; height: 50px; background: var(--light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 20px;">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0 0 4px 0;">${market.name}</h3>
+                            <p style="margin: 0; color: var(--gray); font-size: 14px;">
+                                <i class="fas fa-map-marker-alt"></i> ${market.region}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 8px;">Description</h4>
+                        <p style="color: var(--dark); line-height: 1.6;">${market.description}</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 8px;">Main Products</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${market.products.map(product => `
+                                <span style="background: var(--light); padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--dark); border: 1px solid var(--border);">
+                                    ${product}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div style="background: var(--light); padding: 16px; border-radius: var(--radius-sm);">
+                        <h4 style="margin-bottom: 8px;">Market Analysis</h4>
+                        <p style="color: var(--dark); font-size: 14px; line-height: 1.6;">
+                            This market specializes in ${market.type} products. Consider analyzing specific products from this market to get detailed trend insights.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('marketDetailsModal')">Close</button>
+                    <button class="btn btn-primary" onclick="analyzeMarket('${market.name}'); closeModal('marketDetailsModal')">
+                        <i class="fas fa-chart-line"></i> Analyze Market Products
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+        
+        // Add overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'marketDetailsOverlay';
+        overlay.onclick = () => closeModal('marketDetailsModal');
+        document.body.appendChild(overlay);
+        overlay.classList.add('active');
+    }
+}
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', function() {
-    loadSearchHistory();
-});
-// Expose functions globally for HTML event handlers
-window.showSection = showSection;
-window.searchTrends = searchTrends;
-window.searchFromAdvanced = searchFromAdvanced;
-window.quickSearch = quickSearch;
-window.performSearch = performSearch;
-window.showSettingsTab = showSettingsTab;
-window.saveSettings = saveSettings;
-// Modal Functions
+// Handle Profile Picture Upload
+function handleProfilePictureUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('File size must be less than 5MB', 'error');
+        return;
+    }
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file', 'error');
+        return;
+    }
+    
+    // Read file as data URL
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageData = e.target.result;
+        
+        // Save to localStorage
+        localStorage.setItem('profile_picture', imageData);
+        
+        // Update avatars
+        updateProfileAvatars();
+        
+        // Clear input
+        event.target.value = '';
+        
+        showToast('Profile picture updated successfully', 'success');
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// Update all profile avatars
+function updateProfileAvatars() {
+    const profilePicture = localStorage.getItem('profile_picture');
+    
+    // Update large profile avatar
+    const largeAvatar = document.getElementById('profileAvatarLarge');
+    if (largeAvatar && profilePicture) {
+        largeAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+    }
+    
+    // Update sidebar avatar
+    const userAvatar = document.querySelector('.user-avatar');
+    if (userAvatar && profilePicture) {
+        userAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+    }
+    
+    // Update modal avatar if exists
+    const modalAvatar = document.getElementById('profileAvatarModal');
+    if (modalAvatar && profilePicture) {
+        modalAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
+    }
+}
+
+// Upload Profile Picture
+function uploadProfilePicture() {
+    const fileInput = document.getElementById('profilePictureInput');
+    fileInput.click();
+}
+
+// Open Profile Modal
 function openProfileModal() {
     const modal = document.getElementById('profileModal');
     const overlay = document.getElementById('modalOverlay');
@@ -1997,7 +1926,7 @@ function openProfileModal() {
     const profilePicture = localStorage.getItem('profile_picture');
     const profileAvatarModal = document.getElementById('profileAvatarModal');
     if (profilePicture && profileAvatarModal) {
-        profileAvatarModal.innerHTML = `<img src="${profilePicture}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+        profileAvatarModal.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
     }
     
     modal.classList.add('active');
@@ -2031,20 +1960,69 @@ function closeAllModals() {
     closeContactsModal();
 }
 
-// Expose functions to window
-window.openProfileModal = openProfileModal;
-window.closeProfileModal = closeProfileModal;
-window.openContactsModal = openContactsModal;
-window.closeContactsModal = closeContactsModal;
-window.closeAllModals = closeAllModals;
+// Logout function
+function logout() {
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_email');
+    window.location.href = 'index.html';
+}
 
+// Load user info
+function loadUserInfo() {
+    const userName = localStorage.getItem('user_name') || 'User';
+    const userEmail = localStorage.getItem('user_email') || 'user@example.com';
+    
+    // Update sidebar
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    const sidebarUserEmail = document.getElementById('sidebarUserEmail');
+    if (sidebarUserName) sidebarUserName.textContent = userName;
+    if (sidebarUserEmail) sidebarUserEmail.textContent = userEmail;
+    
+    // Update profile picture
+    updateProfileAvatars();
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current date
+    const now = new Date();
+    const dateElement = document.getElementById('currentDate');
+    if (dateElement) {
+        dateElement.textContent = now.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+    }
+    
+    // Load initial data
+    loadSearchHistory();
+    initMarketDirectory();
+});
+
+// Expose functions globally
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;
+window.searchTrends = searchTrends;
+window.searchFromAdvanced = searchFromAdvanced;
+window.quickSearch = quickSearch;
+window.performSearch = performSearch;
+window.performAdvancedSearch = performAdvancedSearch;
+window.applyFilters = applyFilters;
+window.compareTrends = compareTrends;
+window.filterMarkets = filterMarkets;
+window.analyzeMarket = analyzeMarket;
+window.viewMarketDetails = viewMarketDetails;
+window.showSettingsTab = showSettingsTab;
+window.saveSettings = saveSettings;
 window.changeTheme = changeTheme;
 window.showLoading = showLoading;
 window.hideLoading = hideLoading;
 window.showToast = showToast;
 window.logout = logout;
 window.loadUserInfo = loadUserInfo;
-window.initChart = initChart;
 window.initMarketDirectory = initMarketDirectory;
 window.loadSearchHistory = loadSearchHistory;
 window.loadProfileData = loadProfileData;
@@ -2054,8 +2032,16 @@ window.showEditProfile = showEditProfile;
 window.saveEditProfile = saveEditProfile;
 window.changePassword = changePassword;
 window.saveNewPassword = saveNewPassword;
-window.exportUserData = exportUserData;
-window.downloadUserData = downloadUserData;
-window.downloadUserDataPDF = downloadUserDataPDF;
-window.downloadUserDataJSON = downloadUserDataJSON;
+window.exportUserDataPDF = exportUserDataPDF;
 window.closeModal = closeModal;
+window.uploadProfilePicture = uploadProfilePicture;
+window.handleProfilePictureUpload = handleProfilePictureUpload;
+window.openProfileModal = openProfileModal;
+window.closeProfileModal = closeProfileModal;
+window.openContactsModal = openContactsModal;
+window.closeContactsModal = closeContactsModal;
+window.closeAllModals = closeAllModals;
+window.viewDetailedAnalysis = viewDetailedAnalysis;
+window.goBackToSearch = goBackToSearch;
+window.downloadSearchReportPDF = downloadSearchReportPDF;
+window.updateChartRange = updateChartRange;

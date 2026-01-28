@@ -7,22 +7,14 @@
     <meta http-equiv="pragma" content="no-cache">
     <meta http-equiv="expires" content="0">
     <title>2KNOW - Market Dashboard</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Add CSP meta tag to block extension interference -->
-    <meta http-equiv="Content-Security-Policy" content="
-  default-src 'self' http://127.0.0.1:8000;
-  script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline';
-  style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
-  font-src 'self' https://cdnjs.cloudflare.com data:;
-  connect-src 'self' https://cdn.jsdelivr.net http://127.0.0.1:8000;
-">
-
-
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="dashboard-page">
 
@@ -49,10 +41,29 @@
             <a href="#" class="nav-item" onclick="showSection('insights', event)">
                 <i class="fas fa-lightbulb"></i> <span>AI Insights</span>
             </a>
+            <a href="#" class="nav-item" onclick="showSection('markets', event)">
+                <i class="fas fa-map-marked-alt"></i> <span>Markets</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showSection('profile', event)">
+                <i class="fas fa-user"></i> <span>Profile</span>
+            </a>
             <a href="#" class="nav-item" onclick="showSection('settings', event)">
                 <i class="fas fa-cog"></i> <span>Settings</span>
             </a>
         </nav>
+
+        <div class="user-profile">
+            <div class="user-avatar" id="sidebarUserAvatar">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="user-info">
+                <div class="user-name" id="sidebarUserName">User</div>
+                <div class="user-email" id="sidebarUserEmail">user@example.com</div>
+            </div>
+            <a href="index.html" class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
     </div>
 
     <!-- Main Content -->
@@ -67,6 +78,50 @@
                 <p class="subtitle" id="pageSubtitle">Real-time trend analysis for Kenyan markets</p>
             </div>
             <div class="header-actions">
+                <!-- Search Box -->
+                <div class="search-box">
+                    <input type="text" id="keywordInput" placeholder="Search product (e.g., maize, phones)" 
+                           onkeypress="if(event.key === 'Enter') searchTrends()">
+                    <button onclick="searchTrends()">
+                        <i class="fas fa-chart-line"></i> Analyze
+                    </button>
+                </div>
+                
+                <!-- Region Selector for Dashboard -->
+                <div class="region-selector" id="dashboardRegionSelector">
+                    <select id="dashboardRegion" onchange="analyzeWithRegion()">
+                        <option value="KE">All Kenya</option>
+                        <option value="Nairobi">Nairobi</option>
+                        <option value="Mombasa">Mombasa</option>
+                        <option value="Kisumu">Kisumu</option>
+                        <option value="Nakuru">Nakuru</option>
+                        <option value="Eldoret">Eldoret</option>
+                        <option value="Kisii">Kisii</option>
+                        <option value="Kericho">Kericho</option>
+                        <option value="Nyeri">Nyeri</option>
+                        <option value="Thika">Thika</option>
+                        <option value="Machakos">Machakos</option>
+                        <option value="Meru">Meru</option>
+                        <option value="Embu">Embu</option>
+                        <option value="Kilifi">Kilifi</option>
+                        <option value="Naivasha">Naivasha</option>
+                        <option value="Kakamega">Kakamega</option>
+                        <option value="Bungoma">Bungoma</option>
+                        <option value="Kitale">Kitale</option>
+                        <option value="Bomet">Bomet</option>
+                        <option value="Muranga">Muranga</option>
+                        <option value="Kajiado">Kajiado</option>
+                        <option value="Isiolo">Isiolo</option>
+                        <option value="Malindi">Malindi</option>
+                        <option value="Lamu">Lamu</option>
+                    </select>
+                </div>
+                
+                <div class="date-display">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span id="currentDate">Loading...</span>
+                </div>
+                
                 <div class="header-profile">
                     <button class="header-icon-btn" onclick="openProfileModal()" title="Profile">
                         <i class="fas fa-user-circle"></i>
@@ -75,10 +130,6 @@
                         <i class="fas fa-phone"></i>
                     </button>
                 </div>
-                <div class="date-display">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span id="currentDate">Loading...</span>
-                </div>
             </div>
         </header>
 
@@ -86,17 +137,51 @@
         <div class="content-area">
             <!-- DASHBOARD SECTION -->
             <section id="dashboardSection" class="section active">
-                <div class="welcome-banner" id="welcomeBanner">
-                    <h2>Welcome to 2KNOW Analytics</h2>
-                    <p>Get real-time market trends for any product in Kenya. Start by searching above.</p>
-                    <div class="quick-stats" id="quickStats" style="display: none;">
-                        <div class="quick-stat">
-                            <i class="fas fa-bolt"></i>
-                            <span>Live analysis for: <strong id="lastKeyword">maize</strong></span>
+                <!-- Quick Analyze Card -->
+                <div class="quick-analyze-card">
+                    <div class="analyze-header">
+                        <h3><i class="fas fa-bolt"></i> Quick Market Analysis</h3>
+                        <p>Get instant insights for any product in your selected region</p>
+                    </div>
+                    <div class="analyze-controls">
+                        <div class="analyze-input-group">
+                            <input type="text" id="dashboardProductInput" placeholder="Enter product name (e.g., maize, smartphones)">
+                            <select id="dashboardRegionSelect">
+                                <option value="KE">All Kenya</option>
+                                <option value="Nairobi">Nairobi</option>
+                                <option value="Mombasa">Mombasa</option>
+                                <option value="Kisumu">Kisumu</option>
+                                <option value="Nakuru">Nakuru</option>
+                                <option value="Eldoret">Eldoret</option>
+                                <option value="Kisii">Kisii</option>
+                                <option value="Kericho">Kericho</option>
+                                <option value="Nyeri">Nyeri</option>
+                                <option value="Thika">Thika</option>
+                                <option value="Machakos">Machakos</option>
+                                <option value="Meru">Meru</option>
+                                <option value="Embu">Embu</option>
+                                <option value="Kilifi">Kilifi</option>
+                                <option value="Naivasha">Naivasha</option>
+                                <option value="Kakamega">Kakamega</option>
+                                <option value="Bungoma">Bungoma</option>
+                                <option value="Kitale">Kitale</option>
+                                <option value="Bomet">Bomet</option>
+                                <option value="Muranga">Muranga</option>
+                                <option value="Kajiado">Kajiado</option>
+                                <option value="Isiolo">Isiolo</option>
+                                <option value="Malindi">Malindi</option>
+                                <option value="Lamu">Lamu</option>
+                            </select>
+                            <button class="analyze-btn" onclick="analyzeDashboardProduct()">
+                                <i class="fas fa-chart-line"></i> Analyze Now
+                            </button>
                         </div>
-                        <div class="quick-stat">
-                            <i class="fas fa-clock"></i>
-                            <span>Last updated: <strong id="lastUpdate">Just now</strong></span>
+                        <div class="quick-suggestions">
+                            <span>Quick picks:</span>
+                            <button onclick="quickAnalyze('maize', 'KE')">Maize</button>
+                            <button onclick="quickAnalyze('mobile phones', 'Nairobi')">Phones</button>
+                            <button onclick="quickAnalyze('vegetables', 'Mombasa')">Vegetables</button>
+                            <button onclick="quickAnalyze('second hand cars', 'Nakuru')">Used Cars</button>
                         </div>
                     </div>
                 </div>
@@ -168,8 +253,8 @@
                                 <option value="6" selected>6 Months</option>
                                 <option value="3">3 Months</option>
                             </select>
-                            <button class="chart-btn" onclick="downloadChartData()">
-                                <i class="fas fa-download"></i> Export
+                            <button class="chart-btn" onclick="downloadChartPDF()">
+                                <i class="fas fa-download"></i> Export PDF
                             </button>
                         </div>
                     </div>
@@ -259,52 +344,29 @@
                             <label for="regionFilter"><i class="fas fa-map-marker-alt"></i> Region</label>
                             <select id="regionFilter">
                                 <option value="KE">All Kenya</option>
-                                <option value="Baringo">Baringo County</option>
-                                <option value="Bomet">Bomet County</option>
-                                <option value="Bungoma">Bungoma County</option>
-                                <option value="Busia">Busia County</option>
-                                <option value="Calibri">Calibri County</option>
-                                <option value="Elgeyo-Marakwet">Elgeyo-Marakwet County</option>
-                                <option value="Embu">Embu County</option>
-                                <option value="Garissa">Garissa County</option>
-                                <option value="Homabay">Homa Bay County</option>
-                                <option value="Isiolo">Isiolo County</option>
-                                <option value="Kajiado">Kajiado County</option>
-                                <option value="Kakamega">Kakamega County</option>
-                                <option value="Kericho">Kericho County</option>
-                                <option value="Kiambu">Kiambu County</option>
-                                <option value="Kilifi">Kilifi County</option>
-                                <option value="Kirinyaga">Kirinyaga County</option>
-                                <option value="Kisii">Kisii County</option>
-                                <option value="Kisumu">Kisumu County</option>
-                                <option value="Kitui">Kitui County</option>
-                                <option value="Kwale">Kwale County</option>
-                                <option value="Laikipia">Laikipia County</option>
-                                <option value="Lamu">Lamu County</option>
-                                <option value="Machakos">Machakos County</option>
-                                <option value="Makueni">Makueni County</option>
-                                <option value="Mandera">Mandera County</option>
-                                <option value="Meru">Meru County</option>
-                                <option value="Migori">Migori County</option>
-                                <option value="Mombasa">Mombasa County</option>
-                                <option value="Murang'a">Murang'a County</option>
-                                <option value="Muranga">Muranga County</option>
-                                <option value="Nairobi">Nairobi County</option>
-                                <option value="Nakuru">Nakuru County</option>
-                                <option value="Nandi">Nandi County</option>
-                                <option value="Narok">Narok County</option>
-                                <option value="Nyamira">Nyamira County</option>
-                                <option value="Nyandarua">Nyandarua County</option>
-                                <option value="Nyeri">Nyeri County</option>
-                                <option value="Samburu">Samburu County</option>
-                                <option value="Siaya">Siaya County</option>
-                                <option value="Tanariver">Tana River County</option>
-                                <option value="Tharaka-Nithi">Tharaka Nithi County</option>
-                                <option value="Transnzoia">Trans Nzoia County</option>
-                                <option value="Turkana">Turkana County</option>
-                                <option value="Uasin-Gishu">Uasin Gishu County</option>
-                                <option value="VihigA">Vihiga County</option>
-                                <option value="WestPokot">West Pokot County</option>
+                                <option value="Nairobi">Nairobi</option>
+                                <option value="Mombasa">Mombasa</option>
+                                <option value="Kisumu">Kisumu</option>
+                                <option value="Nakuru">Nakuru</option>
+                                <option value="Eldoret">Eldoret</option>
+                                <option value="Kisii">Kisii</option>
+                                <option value="Kericho">Kericho</option>
+                                <option value="Nyeri">Nyeri</option>
+                                <option value="Thika">Thika</option>
+                                <option value="Machakos">Machakos</option>
+                                <option value="Meru">Meru</option>
+                                <option value="Embu">Embu</option>
+                                <option value="Kilifi">Kilifi</option>
+                                <option value="Naivasha">Naivasha</option>
+                                <option value="Kakamega">Kakamega</option>
+                                <option value="Bungoma">Bungoma</option>
+                                <option value="Kitale">Kitale</option>
+                                <option value="Bomet">Bomet</option>
+                                <option value="Muranga">Muranga</option>
+                                <option value="Kajiado">Kajiado</option>
+                                <option value="Isiolo">Isiolo</option>
+                                <option value="Malindi">Malindi</option>
+                                <option value="Lamu">Lamu</option>
                             </select>
                         </div>
                         <div class="filter-group">
@@ -317,7 +379,7 @@
                             </select>
                         </div>
                         <button class="apply-filters" onclick="applyFilters()">
-                            <i class="fas fa-filter"></i> Apply
+                            <i class="fas fa-filter"></i> Apply Filters
                         </button>
                     </div>
 
@@ -393,6 +455,60 @@
                 </div>
 
                 <div class="insights-container-full">
+                    <!-- AI Insights Analyze Card -->
+                    <div class="ai-analyze-card">
+                        <div class="ai-analyze-header">
+                            <h3><i class="fas fa-brain"></i> AI-Powered Market Analysis</h3>
+                            <p>Get predictive insights and recommendations for any product and region</p>
+                        </div>
+                        <div class="ai-analyze-controls">
+                            <div class="ai-analyze-inputs">
+                                <input type="text" id="aiProductInput" placeholder="Enter product name (e.g., maize, electronics)">
+                                <select id="aiRegionSelect">
+                                    <option value="KE">All Kenya</option>
+                                    <option value="Nairobi">Nairobi</option>
+                                    <option value="Mombasa">Mombasa</option>
+                                    <option value="Kisumu">Kisumu</option>
+                                    <option value="Nakuru">Nakuru</option>
+                                    <option value="Eldoret">Eldoret</option>
+                                    <option value="Kisii">Kisii</option>
+                                    <option value="Kericho">Kericho</option>
+                                    <option value="Nyeri">Nyeri</option>
+                                    <option value="Thika">Thika</option>
+                                    <option value="Machakos">Machakos</option>
+                                    <option value="Meru">Meru</option>
+                                    <option value="Embu">Embu</option>
+                                    <option value="Kilifi">Kilifi</option>
+                                    <option value="Naivasha">Naivasha</option>
+                                    <option value="Kakamega">Kakamega</option>
+                                    <option value="Bungoma">Bungoma</option>
+                                    <option value="Kitale">Kitale</option>
+                                    <option value="Bomet">Bomet</option>
+                                    <option value="Muranga">Muranga</option>
+                                    <option value="Kajiado">Kajiado</option>
+                                    <option value="Isiolo">Isiolo</option>
+                                    <option value="Malindi">Malindi</option>
+                                    <option value="Lamu">Lamu</option>
+                                </select>
+                                <select id="aiTimeframe">
+                                    <option value="30">30 Days</option>
+                                    <option value="90" selected>90 Days</option>
+                                    <option value="180">180 Days</option>
+                                    <option value="365">1 Year</option>
+                                </select>
+                                <button class="ai-analyze-btn" onclick="analyzeWithAI()">
+                                    <i class="fas fa-brain"></i> Generate AI Insights
+                                </button>
+                            </div>
+                            <div class="ai-quick-options">
+                                <span>Quick Analysis:</span>
+                                <button onclick="quickAIAnalyze('maize', 'Nairobi', '90')">Maize in Nairobi</button>
+                                <button onclick="quickAIAnalyze('mobile phones', 'Mombasa', '30')">Phones in Mombasa</button>
+                                <button onclick="quickAIAnalyze('vegetables', 'Kisumu', '180')">Vegetables in Kisumu</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="ai-badge">
                         <i class="fas fa-brain"></i> AI-Powered Analysis
                     </div>
@@ -422,12 +538,12 @@
                     </div>
 
                     <div class="predictions">
-                        <h3><i class="fas fa-crystal-ball"></i> 30-Day Market Prediction</h3>
+                        <h3><i class="fas fa-crystal-ball"></i> Market Prediction</h3>
                         <div class="prediction-chart">
                             <canvas id="predictionChart"></canvas>
                         </div>
                         <div class="prediction-details" id="predictionDetails">
-                            <p><i class="fas fa-info-circle" style="margin-right: 8px;"></i>Enter a product in the search bar to get AI-powered predictions</p>
+                            <p><i class="fas fa-info-circle" style="margin-right: 8px;"></i>Enter a product above to get AI-powered predictions</p>
                         </div>
                     </div>
 
@@ -475,52 +591,29 @@
                         <input type="text" id="marketSearch" placeholder="Search markets..." onkeyup="filterMarkets()">
                         <select id="marketRegion" onchange="filterMarkets()">
                             <option value="">All Regions</option>
-                            <option value="Baringo">Baringo County</option>
-                            <option value="Bomet">Bomet County</option>
-                            <option value="Bungoma">Bungoma County</option>
-                            <option value="Busia">Busia County</option>
-                            <option value="Calibri">Calibri County</option>
-                            <option value="Elgeyo-Marakwet">Elgeyo-Marakwet County</option>
-                            <option value="Embu">Embu County</option>
-                            <option value="Garissa">Garissa County</option>
-                            <option value="Homabay">Homa Bay County</option>
-                            <option value="Isiolo">Isiolo County</option>
-                            <option value="Kajiado">Kajiado County</option>
-                            <option value="Kakamega">Kakamega County</option>
-                            <option value="Kericho">Kericho County</option>
-                            <option value="Kiambu">Kiambu County</option>
-                            <option value="Kilifi">Kilifi County</option>
-                            <option value="Kirinyaga">Kirinyaga County</option>
-                            <option value="Kisii">Kisii County</option>
-                            <option value="Kisumu">Kisumu County</option>
-                            <option value="Kitui">Kitui County</option>
-                            <option value="Kwale">Kwale County</option>
-                            <option value="Laikipia">Laikipia County</option>
-                            <option value="Lamu">Lamu County</option>
-                            <option value="Machakos">Machakos County</option>
-                            <option value="Makueni">Makueni County</option>
-                            <option value="Mandera">Mandera County</option>
-                            <option value="Meru">Meru County</option>
-                            <option value="Migori">Migori County</option>
-                            <option value="Mombasa">Mombasa County</option>
-                            <option value="Murang'a">Murang'a County</option>
-                            <option value="Muranga">Muranga County</option>
-                            <option value="Nairobi">Nairobi County</option>
-                            <option value="Nakuru">Nakuru County</option>
-                            <option value="Nandi">Nandi County</option>
-                            <option value="Narok">Narok County</option>
-                            <option value="Nyamira">Nyamira County</option>
-                            <option value="Nyandarua">Nyandarua County</option>
-                            <option value="Nyeri">Nyeri County</option>
-                            <option value="Samburu">Samburu County</option>
-                            <option value="Siaya">Siaya County</option>
-                            <option value="Tanariver">Tana River County</option>
-                            <option value="Tharaka-Nithi">Tharaka Nithi County</option>
-                            <option value="Transnzoia">Trans Nzoia County</option>
-                            <option value="Turkana">Turkana County</option>
-                            <option value="Uasin-Gishu">Uasin Gishu County</option>
-                            <option value="VihigA">Vihiga County</option>
-                            <option value="WestPokot">West Pokot County</option>
+                            <option value="Nairobi">Nairobi</option>
+                            <option value="Mombasa">Mombasa</option>
+                            <option value="Kisumu">Kisumu</option>
+                            <option value="Nakuru">Nakuru</option>
+                            <option value="Eldoret">Eldoret</option>
+                            <option value="Kisii">Kisii</option>
+                            <option value="Kericho">Kericho</option>
+                            <option value="Nyeri">Nyeri</option>
+                            <option value="Thika">Thika</option>
+                            <option value="Machakos">Machakos</option>
+                            <option value="Meru">Meru</option>
+                            <option value="Embu">Embu</option>
+                            <option value="Kilifi">Kilifi</option>
+                            <option value="Naivasha">Naivasha</option>
+                            <option value="Kakamega">Kakamega</option>
+                            <option value="Bungoma">Bungoma</option>
+                            <option value="Kitale">Kitale</option>
+                            <option value="Bomet">Bomet</option>
+                            <option value="Muranga">Muranga</option>
+                            <option value="Kajiado">Kajiado</option>
+                            <option value="Isiolo">Isiolo</option>
+                            <option value="Malindi">Malindi</option>
+                            <option value="Lamu">Lamu</option>
                         </select>
                         <select id="marketType" onchange="filterMarkets()">
                             <option value="">All Types</option>
@@ -547,7 +640,7 @@
                 <div class="profile-container">
                     <div class="profile-card">
                         <div class="profile-header">
-                            <div class="profile-avatar-large">
+                            <div class="profile-avatar-large" id="profileAvatarLarge">
                                 <i class="fas fa-user-circle"></i>
                             </div>
                             <div class="profile-info">
@@ -585,8 +678,8 @@
                             <button class="profile-btn" onclick="changePassword()">
                                 <i class="fas fa-key"></i> Change Password
                             </button>
-                            <button class="profile-btn" onclick="exportUserData()">
-                                <i class="fas fa-download"></i> Export Data
+                            <button class="profile-btn" onclick="exportUserDataPDF()">
+                                <i class="fas fa-download"></i> Export Data (PDF)
                             </button>
                         </div>
                         
@@ -624,78 +717,110 @@
                         <button class="settings-tab active" onclick="showSettingsTab('general', event)">
                             <i class="fas fa-sliders-h"></i> General
                         </button>
+                        <button class="settings-tab" onclick="showSettingsTab('notifications', event)">
+                            <i class="fas fa-bell"></i> Notifications
+                        </button>
+                        <button class="settings-tab" onclick="showSettingsTab('privacy', event)">
+                            <i class="fas fa-shield-alt"></i> Privacy
+                        </button>
                     </div>
 
                     <div class="settings-content">
                         <div id="generalSettings" class="settings-tab-content active">
                             <h3>General Settings</h3>
-                           <div class="setting-item">
-    <label for="themeSetting">Theme</label>
-    <select id="themeSetting">
-        <option value="light">Light Mode</option>
-        <option value="dark">Dark Mode</option>
-        <option value="purple">Purple Theme</option>
-        <option value="ocean">Ocean Theme</option>
-        <option value="forest">Forest Theme</option>
-        <option value="sunset">Sunset Theme</option>
-    </select>
-</div>
+                            <div class="setting-item">
+                                <label for="themeSetting">Theme</label>
+                                <select id="themeSetting" onchange="changeTheme(this.value)">
+                                    <option value="light">Light Mode</option>
+                                    <option value="dark">Dark Mode</option>
+                                    <option value="purple">Purple Theme</option>
+                                    <option value="ocean">Ocean Theme</option>
+                                    <option value="forest">Forest Theme</option>
+                                    <option value="sunset">Sunset Theme</option>
+                                    <option value="auto">Auto (System)</option>
+                                </select>
+                            </div>
                            
                             <div class="setting-item">
                                 <label for="regionSetting">Default Region</label>
                                 <select id="regionSetting">
-                                    <option value="KE">Kenya (All)</option>
-                                    <option value="Baringo">Baringo County</option>
-                                    <option value="Bomet">Bomet County</option>
-                                    <option value="Bungoma">Bungoma County</option>
-                                    <option value="Busia">Busia County</option>
-                                    <option value="Calibri">Calibri County</option>
-                                    <option value="Elgeyo-Marakwet">Elgeyo-Marakwet County</option>
-                                    <option value="Embu">Embu County</option>
-                                    <option value="Garissa">Garissa County</option>
-                                    <option value="Homabay">Homa Bay County</option>
-                                    <option value="Isiolo">Isiolo County</option>
-                                    <option value="Kajiado">Kajiado County</option>
-                                    <option value="Kakamega">Kakamega County</option>
-                                    <option value="Kericho">Kericho County</option>
-                                    <option value="Kiambu">Kiambu County</option>
-                                    <option value="Kilifi">Kilifi County</option>
-                                    <option value="Kirinyaga">Kirinyaga County</option>
-                                    <option value="Kisii">Kisii County</option>
-                                    <option value="Kisumu">Kisumu County</option>
-                                    <option value="Kitui">Kitui County</option>
-                                    <option value="Kwale">Kwale County</option>
-                                    <option value="Laikipia">Laikipia County</option>
-                                    <option value="Lamu">Lamu County</option>
-                                    <option value="Machakos">Machakos County</option>
-                                    <option value="Makueni">Makueni County</option>
-                                    <option value="Mandera">Mandera County</option>
-                                    <option value="Meru">Meru County</option>
-                                    <option value="Migori">Migori County</option>
-                                    <option value="Mombasa">Mombasa County</option>
-                                    <option value="Murang'a">Murang'a County</option>
-                                    <option value="Muranga">Muranga County</option>
-                                    <option value="Nairobi">Nairobi County</option>
-                                    <option value="Nakuru">Nakuru County</option>
-                                    <option value="Nandi">Nandi County</option>
-                                    <option value="Narok">Narok County</option>
-                                    <option value="Nyamira">Nyamira County</option>
-                                    <option value="Nyandarua">Nyandarua County</option>
-                                    <option value="Nyeri">Nyeri County</option>
-                                    <option value="Samburu">Samburu County</option>
-                                    <option value="Siaya">Siaya County</option>
-                                    <option value="Tanariver">Tana River County</option>
-                                    <option value="Tharaka-Nithi">Tharaka Nithi County</option>
-                                    <option value="Transnzoia">Trans Nzoia County</option>
-                                    <option value="Turkana">Turkana County</option>
-                                    <option value="Uasin-Gishu">Uasin Gishu County</option>
-                                    <option value="VihigA">Vihiga County</option>
-                                    <option value="WestPokot">West Pokot County</option>
+                                    <option value="KE">All Kenya</option>
+                                    <option value="Nairobi">Nairobi</option>
+                                    <option value="Mombasa">Mombasa</option>
+                                    <option value="Kisumu">Kisumu</option>
+                                    <option value="Nakuru">Nakuru</option>
+                                    <option value="Eldoret">Eldoret</option>
+                                    <option value="Kisii">Kisii</option>
+                                    <option value="Kericho">Kericho</option>
+                                    <option value="Nyeri">Nyeri</option>
+                                    <option value="Thika">Thika</option>
+                                    <option value="Machakos">Machakos</option>
+                                    <option value="Meru">Meru</option>
+                                    <option value="Embu">Embu</option>
+                                    <option value="Kilifi">Kilifi</option>
+                                    <option value="Naivasha">Naivasha</option>
+                                    <option value="Kakamega">Kakamega</option>
+                                    <option value="Bungoma">Bungoma</option>
+                                    <option value="Kitale">Kitale</option>
+                                    <option value="Bomet">Bomet</option>
+                                    <option value="Muranga">Muranga</option>
+                                    <option value="Kajiado">Kajiado</option>
+                                    <option value="Isiolo">Isiolo</option>
+                                    <option value="Malindi">Malindi</option>
+                                    <option value="Lamu">Lamu</option>
                                 </select>
                             </div>
                             <button class="save-settings" onclick="saveSettings()">
                                 <i class="fas fa-save"></i> Save Settings
                             </button>
+                        </div>
+
+                        <div id="notificationsSettings" class="settings-tab-content">
+                            <h3>Notification Settings</h3>
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="emailNotifications" checked>
+                                    <span class="slider"></span>
+                                    <span class="switch-label">Email Notifications</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="trendAlerts" checked>
+                                    <span class="slider"></span>
+                                    <span class="switch-label">Trend Alerts</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="marketUpdates">
+                                    <span class="slider"></span>
+                                    <span class="switch-label">Market Updates</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="privacySettings" class="settings-tab-content">
+                            <h3>Privacy Settings</h3>
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="dataCollection" checked>
+                                    <span class="slider"></span>
+                                    <span class="switch-label">Allow Data Collection</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="switch">
+                                    <input type="checkbox" id="personalizedAds">
+                                    <span class="slider"></span>
+                                    <span class="switch-label">Personalized Ads</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <button class="btn btn-danger" onclick="deleteAccountData()">
+                                    <i class="fas fa-trash"></i> Delete Account Data
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -714,13 +839,13 @@
     <!-- Toast Notification Container -->
     <div id="toastContainer"></div>
 
-    <!-- Scripts - ONLY ONCE -->
-    <script src="js/config.js?v=2"></script>
-    <script src="js/theme.js"></script>
-    <script src="js/auth.js?v=2"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/markets.js"></script>
+    <!-- Scripts -->
+    <script src="js/config.js?v=3"></script>
+    <script src="js/theme.js?v=3"></script>
+    <script src="js/auth.js?v=3"></script>
+    <script src="js/dashboard.js?v=3"></script>
+    <script src="js/charts.js?v=3"></script>
+    <script src="js/markets.js?v=3"></script>
     
     <!-- Initialize dashboard -->
     <script>
@@ -758,26 +883,18 @@
                 window.loadSearchHistory();
             }
             
-            // Load default data
-            setTimeout(() => {
-                // Try to load last search or default
-                const lastSearch = localStorage.getItem('last_search');
-                if (lastSearch) {
-                    document.getElementById('keywordInput').value = lastSearch;
-                    if (document.getElementById('lastKeyword')) {
-                        document.getElementById('lastKeyword').textContent = lastSearch;
-                    }
-                    if (document.getElementById('welcomeBanner')) {
-                        document.getElementById('welcomeBanner').style.display = 'block';
-                    }
-                    if (document.getElementById('quickStats')) {
-                        document.getElementById('quickStats').style.display = 'flex';
-                    }
-                }
-            }, 500);
+            // Load saved settings
+            if (window.loadSavedSettings) {
+                window.loadSavedSettings();
+            }
             
             // Set up auto-refresh for date
             setInterval(updateCurrentDate, 60000);
+            
+            // Initialize theme
+            if (window.initializeTheme) {
+                window.initializeTheme();
+            }
         });
         
         function updateCurrentDate() {
@@ -797,41 +914,296 @@
             }
         }
         
-        // Simple theme changer if theme.js fails
-        function changeTheme(theme) {
-            console.log('Changing theme to:', theme);
+        // Analyze with selected region
+        function analyzeWithRegion() {
+            const region = document.getElementById('dashboardRegion').value;
+            const keyword = document.getElementById('keywordInput').value.trim();
             
-            // Remove existing theme classes
-            document.body.classList.remove('light-theme', 'dark-theme');
-            
-            // Set the theme
-            if (theme === 'dark') {
-                document.body.classList.add('dark-theme');
-                document.body.style.backgroundColor = '#1f2937';
-                document.body.style.color = '#f3f4f6';
-            } else if (theme === 'light') {
-                document.body.classList.add('light-theme');
-                document.body.style.backgroundColor = '#ffffff';
-                document.body.style.color = '#1f2937';
-            } else if (theme === 'auto') {
-                // Auto detect based on system preference
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.body.classList.add('dark-theme');
-                    document.body.style.backgroundColor = '#1f2937';
-                    document.body.style.color = '#f3f4f6';
-                } else {
-                    document.body.classList.add('light-theme');
-                    document.body.style.backgroundColor = '#ffffff';
-                    document.body.style.color = '#1f2937';
-                }
+            if (!keyword) {
+                showToast('Please enter a product to analyze', 'warning');
+                document.getElementById('keywordInput').focus();
+                return;
             }
             
-            // Save theme preference
-            localStorage.setItem('app_theme', theme);
+            performSearch(keyword, 'dashboard');
+        }
+        
+        // Quick analyze from dashboard
+        function analyzeDashboardProduct() {
+            const product = document.getElementById('dashboardProductInput').value.trim();
+            const region = document.getElementById('dashboardRegionSelect').value;
             
-            // Show toast
-            if (window.showToast) {
-                window.showToast(`Theme changed to ${theme}`, 'success');
+            if (!product) {
+                showToast('Please enter a product name', 'warning');
+                document.getElementById('dashboardProductInput').focus();
+                return;
+            }
+            
+            // Update main search input
+            document.getElementById('keywordInput').value = product;
+            document.getElementById('dashboardRegion').value = region;
+            
+            // Perform analysis
+            performSearch(product, 'dashboard');
+        }
+        
+        // Quick analyze function
+        function quickAnalyze(product, region) {
+            document.getElementById('dashboardProductInput').value = product;
+            document.getElementById('dashboardRegionSelect').value = region;
+            document.getElementById('keywordInput').value = product;
+            document.getElementById('dashboardRegion').value = region;
+            
+            performSearch(product, 'dashboard');
+        }
+        
+        // Analyze with AI
+        function analyzeWithAI() {
+            const product = document.getElementById('aiProductInput').value.trim();
+            const region = document.getElementById('aiRegionSelect').value;
+            const timeframe = document.getElementById('aiTimeframe').value;
+            
+            if (!product) {
+                showToast('Please enter a product name', 'warning');
+                document.getElementById('aiProductInput').focus();
+                return;
+            }
+            
+            generateAIInsights(product, region, timeframe);
+        }
+        
+        // Quick AI analyze
+        function quickAIAnalyze(product, region, timeframe) {
+            document.getElementById('aiProductInput').value = product;
+            document.getElementById('aiRegionSelect').value = region;
+            document.getElementById('aiTimeframe').value = timeframe;
+            
+            generateAIInsights(product, region, timeframe);
+        }
+        
+        // Generate AI Insights
+        function generateAIInsights(product, region, timeframe) {
+            showLoading(`Analyzing ${product} in ${region}...`);
+            
+            // Simulate AI analysis
+            setTimeout(() => {
+                hideLoading();
+                
+                // Generate random scores
+                const opportunityScore = Math.floor(Math.random() * 30) + 60;
+                const trendScore = Math.floor(Math.random() * 30) + 50;
+                const riskScore = Math.floor(Math.random() * 30) + 40;
+                
+                // Update opportunity score
+                document.getElementById('opportunityScore').textContent = opportunityScore + '%';
+                
+                // Update time recommendation based on timeframe
+                let bestTime = 'Good time to invest';
+                if (timeframe === '30') bestTime = 'Next 30 days optimal';
+                else if (timeframe === '90') bestTime = 'Q3-Q4 peak season';
+                else if (timeframe === '180') bestTime = 'Next 6 months favorable';
+                else bestTime = 'Year-round opportunity';
+                
+                document.getElementById('bestTime').textContent = bestTime;
+                
+                // Update prediction details
+                const predictionDetails = document.getElementById('predictionDetails');
+                if (predictionDetails) {
+                    predictionDetails.innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                            <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #10B981;">
+                                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Trend Score</div>
+                                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${trendScore}%</div>
+                            </div>
+                            <div style="background: rgba(79, 70, 229, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #4F46E5;">
+                                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Risk Assessment</div>
+                                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${riskScore}%</div>
+                            </div>
+                            <div style="background: rgba(245, 158, 11, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #F59E0B;">
+                                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Region Focus</div>
+                                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${region}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; font-size: 14px; color: var(--dark); line-height: 1.6;">
+                            <p><strong>AI Insights:</strong> ${product} shows strong potential in ${region} with ${opportunityScore}% opportunity score. Recommended action timeframe: ${timeframe} days.</p>
+                        </div>
+                    `;
+                }
+                
+                // Update recommendations
+                const recommendationList = document.getElementById('recommendationList');
+                if (recommendationList) {
+                    const recommendations = [
+                        {
+                            icon: 'fa-leaf',
+                            title: 'Market Entry Strategy',
+                            description: `Focus on ${region} markets first, expand gradually`,
+                            score: opportunityScore + '%'
+                        },
+                        {
+                            icon: 'fa-calendar-alt',
+                            title: 'Timing Strategy',
+                            description: `Optimize for ${timeframe}-day cycles in ${region}`,
+                            score: '85%'
+                        },
+                        {
+                            icon: 'fa-chart-pie',
+                            title: 'Pricing Strategy',
+                            description: 'Competitive pricing with 15-20% margin recommended',
+                            score: '78%'
+                        }
+                    ];
+                    
+                    recommendationList.innerHTML = recommendations.map(rec => `
+                        <div class="recommendation-item">
+                            <i class="fas ${rec.icon}"></i>
+                            <div>
+                                <h4>${rec.title}</h4>
+                                <p>${rec.description}</p>
+                            </div>
+                            <span class="rec-score">${rec.score}</span>
+                        </div>
+                    `).join('');
+                }
+                
+                // Update prediction chart
+                if (window.updatePredictionChart) {
+                    window.updatePredictionChart(product, region, timeframe);
+                }
+                
+                showToast(`AI insights generated for ${product} in ${region}`, 'success');
+            }, 1500);
+        }
+        
+        // Export chart as PDF
+        function downloadChartPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const product = document.getElementById('keywordInput').value || 'Market Analysis';
+            const region = document.getElementById('dashboardRegion').value || 'Kenya';
+            const date = new Date().toLocaleDateString();
+            
+            // Title
+            doc.setFontSize(20);
+            doc.text(`2KNOW Market Analysis: ${product}`, 20, 20);
+            
+            // Subtitle
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text(`Region: ${region} | Date: ${date}`, 20, 30);
+            
+            // Add some sample content
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text('Market Analysis Summary:', 20, 50);
+            
+            doc.setFontSize(12);
+            const summary = [
+                `Product: ${product}`,
+                `Region: ${region}`,
+                `Overall Score: ${document.getElementById('overallScore')?.textContent || 'N/A'}`,
+                `Market Sector: ${document.getElementById('marketSector')?.textContent || 'N/A'}`,
+                `Active Markets: ${document.getElementById('hotMarkets')?.textContent || '0'}`,
+                `Trend Direction: ${document.getElementById('trendDirection')?.textContent || 'N/A'}`
+            ];
+            
+            summary.forEach((line, index) => {
+                doc.text(line, 20, 70 + (index * 10));
+            });
+            
+            // Save PDF
+            doc.save(`2KNOW-${product.replace(/\s+/g, '-')}-${date}.pdf`);
+            
+            showToast('Chart data exported as PDF successfully', 'success');
+        }
+        
+        // Export user data as PDF
+        function exportUserDataPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const userName = localStorage.getItem('user_name') || 'User';
+            const userEmail = localStorage.getItem('user_email') || 'N/A';
+            const memberSince = localStorage.getItem('member_since') || new Date().toISOString().split('T')[0];
+            const history = JSON.parse(localStorage.getItem('search_history') || '[]');
+            
+            let yPosition = 20;
+            
+            // Title
+            doc.setFontSize(20);
+            doc.text('2KNOW User Data Export', 20, yPosition);
+            yPosition += 15;
+            
+            // Export date
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Export Date: ${new Date().toLocaleString()}`, 20, yPosition);
+            yPosition += 10;
+            
+            // Profile Section
+            doc.setTextColor(0);
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('Profile Information', 20, yPosition);
+            yPosition += 8;
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Name: ${userName}`, 20, yPosition);
+            yPosition += 7;
+            doc.text(`Email: ${userEmail}`, 20, yPosition);
+            yPosition += 7;
+            doc.text(`Member Since: ${new Date(memberSince).toLocaleDateString()}`, 20, yPosition);
+            yPosition += 12;
+            
+            // Search History
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Search History (${history.length} searches)`, 20, yPosition);
+            yPosition += 8;
+            
+            doc.setFontSize(10);
+            if (history.length > 0) {
+                history.forEach((search, index) => {
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    const searchText = `${index + 1}. "${search.keyword}" - ${new Date(search.timestamp).toLocaleDateString()} (Score: ${search.score}%)`;
+                    doc.text(searchText, 20, yPosition);
+                    yPosition += 7;
+                });
+            } else {
+                doc.text('No search history available', 20, yPosition);
+                yPosition += 7;
+            }
+            
+            // Footer
+            doc.setFontSize(9);
+            doc.setTextColor(150);
+            doc.text('This is a secure export of your 2KNOW account data', 20, 285);
+            
+            // Save PDF
+            doc.save(`2KNOW-user-export-${new Date().toISOString().split('T')[0]}.pdf`);
+            
+            showToast('User data exported as PDF successfully', 'success');
+        }
+        
+        // Delete account data
+        function deleteAccountData() {
+            if (confirm('Are you sure you want to delete all your account data? This action cannot be undone.')) {
+                localStorage.removeItem('search_history');
+                localStorage.removeItem('profile_picture');
+                localStorage.removeItem('user_bio');
+                
+                showToast('Account data deleted successfully', 'success');
+                
+                // Refresh profile data
+                if (window.loadProfileData) {
+                    window.loadProfileData();
+                }
             }
         }
     </script>
@@ -849,7 +1221,7 @@
                         <i class="fas fa-user-circle"></i>
                     </div>
                     <button class="btn-upload" onclick="uploadProfilePicture()">Change Profile Picture</button>
-                    <input type="file" id="profilePictureInput" style="display: none;" accept="image/*" onchange="handleProfilePictureUpload(event)">
+                    <input type="file" id="profilePictureInputModal" style="display: none;" accept="image/*" onchange="handleProfilePictureUpload(event)">
                 </div>
                 
                 <div class="profile-info-section">

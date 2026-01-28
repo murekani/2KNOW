@@ -76,11 +76,8 @@ function applyLightTheme() {
     const root = document.documentElement;
     root.style.colorScheme = 'light';
     
-    // Remove dark mode stylesheet
-    const darkStyles = document.getElementById('dark-mode-styles');
-    if (darkStyles) {
-        darkStyles.remove();
-    }
+    // Remove other theme stylesheets
+    removeThemeStylesheets();
     
     document.body.style.backgroundColor = '#ffffff';
     document.body.style.color = '#1f2937';
@@ -91,10 +88,7 @@ function applyDarkTheme() {
     const root = document.documentElement;
     root.style.colorScheme = 'dark';
     
-    document.body.style.backgroundColor = '#1f2937';
-    document.body.style.color = '#f3f4f6';
-    
-    // Dark mode specific adjustments
+    removeThemeStylesheets();
     applyDarkModeStyles();
 }
 
@@ -122,7 +116,6 @@ function applyAutoTheme() {
 
 // Apply comprehensive dark mode styles
 function applyDarkModeStyles() {
-    // Target common elements
     const styles = `
         body, html {
             background-color: #1f2937 !important;
@@ -160,14 +153,35 @@ function applyDarkModeStyles() {
             color: #9ca3af !important;
         }
         
+        .search-box button {
+            background: #4f46e5 !important;
+        }
+        
         .date-display {
             background: #374151 !important;
             color: #d1d5db !important;
         }
         
+        .region-selector select {
+            background: #1f2937 !important;
+            border-color: #4b5563 !important;
+            color: #f3f4f6 !important;
+        }
+        
+        .header-icon-btn {
+            background: #374151 !important;
+            color: #d1d5db !important;
+        }
+        
+        .header-icon-btn:hover {
+            background: #4f46e5 !important;
+            color: white !important;
+        }
+        
         .stat-card, .chart-container, .markets-container, .insights-container,
         .market-card, .profile-card, .detail-card, .settings-container,
-        .search-container, .welcome-banner {
+        .search-container, .quick-analyze-card, .ai-analyze-card,
+        .predictions, .recommendations {
             background: #374151 !important;
             border-color: #4b5563 !important;
             color: #f3f4f6 !important;
@@ -224,11 +238,6 @@ function applyDarkModeStyles() {
         
         .btn-secondary:hover {
             background: #6b7280 !important;
-        }
-        
-        .export-info {
-            background: #1f2937 !important;
-            border-left-color: #818cf8 !important;
         }
         
         .empty-state {
@@ -298,127 +307,145 @@ function applyDarkModeStyles() {
             color: #f3f4f6 !important;
             border-color: #4b5563 !important;
         }
+        
+        .quick-analyze-card {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+        }
+        
+        .ai-analyze-card {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+        }
+        
+        .analyze-btn, .ai-analyze-btn {
+            background: white !important;
+            color: #1f2937 !important;
+        }
+        
+        .analyze-btn:hover, .ai-analyze-btn:hover {
+            background: #f3f4f6 !important;
+        }
+        
+        .quick-suggestions button, .ai-quick-options button {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: white !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .quick-suggestions button:hover, .ai-quick-options button:hover {
+            background: white !important;
+            color: #1f2937 !important;
+        }
+        
+        .insight-card-large {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+        }
+        
+        .ai-badge {
+            background: linear-gradient(135deg, #4b5563, #374151) !important;
+        }
+        
+        .recommendations {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+        }
+        
+        .recommendation-item {
+            background: #1f2937 !important;
+            border-color: #4b5563 !important;
+        }
+        
+        .recommendation-item:hover {
+            border-color: #818cf8 !important;
+        }
+        
+        .search-result-card {
+            background: #374151 !important;
+            border-color: #4b5563 !important;
+        }
+        
+        .result-stat {
+            background: #1f2937 !important;
+        }
+        
+        .market-item {
+            border-bottom-color: #4b5563 !important;
+        }
+        
+        .market-item:hover {
+            background: #1f2937 !important;
+        }
+        
+        .activity-item, .search-item, .history-item {
+            background: #1f2937 !important;
+        }
+        
+        .activity-item:hover, .search-item:hover, .history-item:hover {
+            background: #4b5563 !important;
+        }
     `;
     
-    // Inject dark mode styles
-    let styleSheet = document.getElementById('dark-mode-styles');
-    if (!styleSheet) {
-        styleSheet = document.createElement('style');
-        styleSheet.id = 'dark-mode-styles';
-        document.head.appendChild(styleSheet);
-    }
-    styleSheet.textContent = styles;
+    injectThemeStyles(styles);
 }
 
-// Apply Purple Theme (brand color)
+// Apply Purple Theme
 function applyPurpleTheme() {
     const root = document.documentElement;
     root.style.colorScheme = 'light';
     
-    document.body.style.backgroundColor = '#faf8ff';
-    document.body.style.color = '#1f1a3f';
+    removeThemeStylesheets();
     
     const styles = `
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #5b21b6;
+            --primary-light: #a78bfa;
+            --sidebar: #4c1d95;
+        }
+        
         body, html {
-            background-color: #faf8ff !important;
-            color: #1f1a3f !important;
+            background-color: #faf5ff !important;
+            color: #1e1b4b !important;
         }
         
         .sidebar {
-            background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-            color: white !important;
-        }
-        
-        .sidebar .nav-item, .sidebar .nav-item span {
-            color: #e9d5ff !important;
-        }
-        
-        .sidebar .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
         }
         
         .header {
-            background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%) !important;
             border-bottom: none !important;
         }
         
-        .header-title h1, .header-title .subtitle, .header-icon-btn {
-            color: white !important;
+        .quick-analyze-card {
+            background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%) !important;
         }
         
-        .header-icon-btn:hover {
-            background: rgba(255, 255, 255, 0.2) !important;
-            color: white !important;
+        .ai-analyze-card {
+            background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%) !important;
         }
         
-        .date-display {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+        .stat-icon {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa) !important;
         }
         
-        .stat-card, .chart-container, .markets-container, .insights-container,
-        .market-card, .profile-card, .detail-card, .settings-container,
-        .search-container {
-            background: white !important;
-            border: 1px solid #e9d5ff !important;
-            color: #1f1a3f !important;
+        .insight-card-large {
+            background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%) !important;
         }
         
-        .welcome-banner {
-            background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-            color: white !important;
+        .ai-badge {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa) !important;
         }
         
-        .tag, .market-tag, .badge {
-            background: #ede9fe !important;
-            color: #6d28d9 !important;
-            border: 1px solid #ddd6fe !important;
+        .search-box button, .analyze-btn, .ai-analyze-btn, .apply-filters, .save-settings, .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa) !important;
         }
         
-        .modal-content {
-            background: white !important;
-            color: #1f1a3f !important;
-        }
-        
-        .modal-header {
-            background: #faf8ff !important;
-            color: #1f1a3f !important;
-            border-color: #e9d5ff !important;
-        }
-        
-        .form-input, textarea, select {
-            background: white !important;
-            border: 1px solid #ddd6fe !important;
-            color: #1f1a3f !important;
-        }
-        
-        .form-input:focus, textarea:focus, select:focus {
+        .tag:hover, .quick-suggestions button:hover, .ai-quick-options button:hover {
+            background: #7c3aed !important;
             border-color: #7c3aed !important;
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
-        }
-        
-        .btn, button {
-            color: white !important;
-        }
-        
-        .btn-primary, .btn-primary:hover {
-            background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
-            color: #1f1a3f !important;
         }
     `;
     
-    let styleSheet = document.getElementById('theme-mode-styles');
-    if (!styleSheet) {
-        styleSheet = document.createElement('style');
-        styleSheet.id = 'theme-mode-styles';
-        document.head.appendChild(styleSheet);
-    }
-    styleSheet.textContent = styles;
+    injectThemeStyles(styles);
 }
 
 // Apply Ocean Theme
@@ -426,110 +453,61 @@ function applyOceanTheme() {
     const root = document.documentElement;
     root.style.colorScheme = 'light';
     
-    document.body.style.backgroundColor = '#f0f9ff';
-    document.body.style.color = '#0c2340';
+    removeThemeStylesheets();
     
     const styles = `
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0369a1;
+            --primary-light: #38bdf8;
+            --sidebar: #0c4a6e;
+        }
+        
         body, html {
             background-color: #f0f9ff !important;
-            color: #0c2340 !important;
+            color: #0c4a6e !important;
         }
         
         .sidebar {
-            background: linear-gradient(135deg, #0369a1 0%, #0891b2 100%) !important;
-            color: white !important;
-        }
-        
-        .sidebar .nav-item, .sidebar .nav-item span {
-            color: #cffafe !important;
-        }
-        
-        .sidebar .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%) !important;
         }
         
         .header {
-            background: linear-gradient(135deg, #0369a1 0%, #0891b2 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important;
             border-bottom: none !important;
         }
         
-        .header-title h1, .header-title .subtitle, .header-icon-btn {
-            color: white !important;
+        .quick-analyze-card {
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important;
         }
         
-        .header-icon-btn:hover {
-            background: rgba(255, 255, 255, 0.2) !important;
-            color: white !important;
+        .ai-analyze-card {
+            background: linear-gradient(135deg, #38bdf8 0%, #7dd3fc 100%) !important;
         }
         
-        .date-display {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+        .stat-icon {
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
         }
         
-        .stat-card, .chart-container, .markets-container, .insights-container,
-        .market-card, .profile-card, .detail-card, .settings-container,
-        .search-container {
-            background: white !important;
-            border: 1px solid #cffafe !important;
-            color: #0c2340 !important;
+        .insight-card-large {
+            background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important;
         }
         
-        .welcome-banner {
-            background: linear-gradient(135deg, #0369a1 0%, #0891b2 100%) !important;
-            color: white !important;
+        .ai-badge {
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
         }
         
-        .tag, .market-tag, .badge {
-            background: #ecf9ff !important;
-            color: #0369a1 !important;
-            border: 1px solid #cffafe !important;
+        .search-box button, .analyze-btn, .ai-analyze-btn, .apply-filters, .save-settings, .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
         }
         
-        .modal-content {
-            background: white !important;
-            color: #0c2340 !important;
-        }
-        
-        .modal-header {
-            background: #f0f9ff !important;
-            color: #0c2340 !important;
-            border-color: #cffafe !important;
-        }
-        
-        .form-input, textarea, select {
-            background: white !important;
-            border: 1px solid #cffafe !important;
-            color: #0c2340 !important;
-        }
-        
-        .form-input:focus, textarea:focus, select:focus {
-            border-color: #0891b2 !important;
-            box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1) !important;
-        }
-        
-        .btn, button {
-            color: white !important;
-        }
-        
-        .btn-primary, .btn-primary:hover {
-            background: linear-gradient(135deg, #0369a1 0%, #0891b2 100%) !important;
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
-            color: #0c2340 !important;
+        .tag:hover, .quick-suggestions button:hover, .ai-quick-options button:hover {
+            background: #0ea5e9 !important;
+            border-color: #0ea5e9 !important;
         }
     `;
     
-    let styleSheet = document.getElementById('theme-mode-styles');
-    if (!styleSheet) {
-        styleSheet = document.createElement('style');
-        styleSheet.id = 'theme-mode-styles';
-        document.head.appendChild(styleSheet);
-    }
-    styleSheet.textContent = styles;
+    injectThemeStyles(styles);
 }
 
 // Apply Forest Theme
@@ -537,110 +515,61 @@ function applyForestTheme() {
     const root = document.documentElement;
     root.style.colorScheme = 'light';
     
-    document.body.style.backgroundColor = '#f0fdf4';
-    document.body.style.color = '#0f2818';
+    removeThemeStylesheets();
     
     const styles = `
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #34d399;
+            --sidebar: #064e3b;
+        }
+        
         body, html {
-            background-color: #f0fdf4 !important;
-            color: #0f2818 !important;
+            background-color: #ecfdf5 !important;
+            color: #064e3b !important;
         }
         
         .sidebar {
             background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-            color: white !important;
-        }
-        
-        .sidebar .nav-item, .sidebar .nav-item span {
-            color: #dcfce7 !important;
-        }
-        
-        .sidebar .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
         }
         
         .header {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
             border-bottom: none !important;
         }
         
-        .header-title h1, .header-title .subtitle, .header-icon-btn {
-            color: white !important;
+        .quick-analyze-card {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
         }
         
-        .header-icon-btn:hover {
-            background: rgba(255, 255, 255, 0.2) !important;
-            color: white !important;
+        .ai-analyze-card {
+            background: linear-gradient(135deg, #34d399 0%, #6ee7b7 100%) !important;
         }
         
-        .date-display {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+        .stat-icon {
+            background: linear-gradient(135deg, #10b981, #34d399) !important;
         }
         
-        .stat-card, .chart-container, .markets-container, .insights-container,
-        .market-card, .profile-card, .detail-card, .settings-container,
-        .search-container {
-            background: white !important;
-            border: 1px solid #dcfce7 !important;
-            color: #0f2818 !important;
+        .insight-card-large {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
         }
         
-        .welcome-banner {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-            color: white !important;
+        .ai-badge {
+            background: linear-gradient(135deg, #10b981, #34d399) !important;
         }
         
-        .tag, .market-tag, .badge {
-            background: #ecfdf5 !important;
-            color: #059669 !important;
-            border: 1px solid #dcfce7 !important;
+        .search-box button, .analyze-btn, .ai-analyze-btn, .apply-filters, .save-settings, .btn-primary {
+            background: linear-gradient(135deg, #10b981, #34d399) !important;
         }
         
-        .modal-content {
-            background: white !important;
-            color: #0f2818 !important;
-        }
-        
-        .modal-header {
-            background: #f0fdf4 !important;
-            color: #0f2818 !important;
-            border-color: #dcfce7 !important;
-        }
-        
-        .form-input, textarea, select {
-            background: white !important;
-            border: 1px solid #dcfce7 !important;
-            color: #0f2818 !important;
-        }
-        
-        .form-input:focus, textarea:focus, select:focus {
+        .tag:hover, .quick-suggestions button:hover, .ai-quick-options button:hover {
+            background: #10b981 !important;
             border-color: #10b981 !important;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
-        }
-        
-        .btn, button {
-            color: white !important;
-        }
-        
-        .btn-primary, .btn-primary:hover {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
-            color: #0f2818 !important;
         }
     `;
     
-    let styleSheet = document.getElementById('theme-mode-styles');
-    if (!styleSheet) {
-        styleSheet = document.createElement('style');
-        styleSheet.id = 'theme-mode-styles';
-        document.head.appendChild(styleSheet);
-    }
-    styleSheet.textContent = styles;
+    injectThemeStyles(styles);
 }
 
 // Apply Sunset Theme
@@ -648,103 +577,76 @@ function applySunsetTheme() {
     const root = document.documentElement;
     root.style.colorScheme = 'light';
     
-    document.body.style.backgroundColor = '#fffbeb';
-    document.body.style.color = '#44280c';
+    removeThemeStylesheets();
     
     const styles = `
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --primary-light: #fb923c;
+            --sidebar: #7c2d12;
+        }
+        
         body, html {
             background-color: #fffbeb !important;
-            color: #44280c !important;
+            color: #7c2d12 !important;
         }
         
         .sidebar {
-            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%) !important;
-            color: white !important;
-        }
-        
-        .sidebar .nav-item, .sidebar .nav-item span {
-            color: #fef3c7 !important;
-        }
-        
-        .sidebar .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #ea580c 0%, #f97316 100%) !important;
         }
         
         .header {
-            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%) !important;
             border-bottom: none !important;
         }
         
-        .header-title h1, .header-title .subtitle, .header-icon-btn {
-            color: white !important;
+        .quick-analyze-card {
+            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%) !important;
         }
         
-        .header-icon-btn:hover {
-            background: rgba(255, 255, 255, 0.2) !important;
-            color: white !important;
+        .ai-analyze-card {
+            background: linear-gradient(135deg, #fb923c 0%, #fdba74 100%) !important;
         }
         
-        .date-display {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+        .stat-icon {
+            background: linear-gradient(135deg, #f97316, #fb923c) !important;
         }
         
-        .stat-card, .chart-container, .markets-container, .insights-container,
-        .market-card, .profile-card, .detail-card, .settings-container,
-        .search-container {
-            background: white !important;
-            border: 1px solid #fed7aa !important;
-            color: #44280c !important;
+        .insight-card-large {
+            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%) !important;
         }
         
-        .welcome-banner {
-            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%) !important;
-            color: white !important;
+        .ai-badge {
+            background: linear-gradient(135deg, #f97316, #fb923c) !important;
         }
         
-        .tag, .market-tag, .badge {
-            background: #fef3c7 !important;
-            color: #dc2626 !important;
-            border: 1px solid #fed7aa !important;
+        .search-box button, .analyze-btn, .ai-analyze-btn, .apply-filters, .save-settings, .btn-primary {
+            background: linear-gradient(135deg, #f97316, #fb923c) !important;
         }
         
-        .modal-content {
-            background: white !important;
-            color: #44280c !important;
-        }
-        
-        .modal-header {
-            background: #fffbeb !important;
-            color: #44280c !important;
-            border-color: #fed7aa !important;
-        }
-        
-        .form-input, textarea, select {
-            background: white !important;
-            border: 1px solid #fed7aa !important;
-            color: #44280c !important;
-        }
-        
-        .form-input:focus, textarea:focus, select:focus {
+        .tag:hover, .quick-suggestions button:hover, .ai-quick-options button:hover {
+            background: #f97316 !important;
             border-color: #f97316 !important;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1) !important;
-        }
-        
-        .btn, button {
-            color: white !important;
-        }
-        
-        .btn-primary, .btn-primary:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%) !important;
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
-            color: #44280c !important;
         }
     `;
     
+    injectThemeStyles(styles);
+}
+
+// Remove theme stylesheets
+function removeThemeStylesheets() {
+    const stylesheets = ['theme-mode-styles', 'dark-mode-styles'];
+    stylesheets.forEach(id => {
+        const styleSheet = document.getElementById(id);
+        if (styleSheet) {
+            styleSheet.remove();
+        }
+    });
+}
+
+// Inject theme styles
+function injectThemeStyles(styles) {
     let styleSheet = document.getElementById('theme-mode-styles');
     if (!styleSheet) {
         styleSheet = document.createElement('style');
