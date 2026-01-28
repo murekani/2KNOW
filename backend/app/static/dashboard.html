@@ -38,12 +38,6 @@
             <a href="#" class="nav-item" onclick="showSection('trends', event)">
                 <i class="fas fa-chart-line"></i> <span>Trend Analysis</span>
             </a>
-            <a href="#" class="nav-item" onclick="showSection('insights', event)">
-                <i class="fas fa-lightbulb"></i> <span>AI Insights</span>
-            </a>
-            <a href="#" class="nav-item" onclick="showSection('markets', event)">
-                <i class="fas fa-map-marked-alt"></i> <span>Markets</span>
-            </a>
             <a href="#" class="nav-item" onclick="showSection('profile', event)">
                 <i class="fas fa-user"></i> <span>Profile</span>
             </a>
@@ -78,15 +72,6 @@
                 <p class="subtitle" id="pageSubtitle">Real-time trend analysis for Kenyan markets</p>
             </div>
             <div class="header-actions">
-                <!-- Search Box -->
-                <div class="search-box">
-                    <input type="text" id="keywordInput" placeholder="Search product (e.g., maize, phones)" 
-                           onkeypress="if(event.key === 'Enter') searchTrends()">
-                    <button onclick="searchTrends()">
-                        <i class="fas fa-chart-line"></i> Analyze
-                    </button>
-                </div>
-                
                 <!-- Region Selector for Dashboard -->
                 <div class="region-selector" id="dashboardRegionSelector">
                     <select id="dashboardRegion" onchange="analyzeWithRegion()">
@@ -447,189 +432,6 @@
                 </div>
             </section>
 
-            <!-- AI INSIGHTS SECTION -->
-            <section id="insightsSection" class="section">
-                <div class="section-header">
-                    <h2><i class="fas fa-lightbulb"></i> AI Market Insights</h2>
-                    <p>Intelligent recommendations and market predictions powered by machine learning</p>
-                </div>
-
-                <div class="insights-container-full">
-                    <!-- AI Insights Analyze Card -->
-                    <div class="ai-analyze-card">
-                        <div class="ai-analyze-header">
-                            <h3><i class="fas fa-brain"></i> AI-Powered Market Analysis</h3>
-                            <p>Get predictive insights and recommendations for any product and region</p>
-                        </div>
-                        <div class="ai-analyze-controls">
-                            <div class="ai-analyze-inputs">
-                                <input type="text" id="aiProductInput" placeholder="Enter product name (e.g., maize, electronics)">
-                                <select id="aiRegionSelect">
-                                    <option value="KE">All Kenya</option>
-                                    <option value="Nairobi">Nairobi</option>
-                                    <option value="Mombasa">Mombasa</option>
-                                    <option value="Kisumu">Kisumu</option>
-                                    <option value="Nakuru">Nakuru</option>
-                                    <option value="Eldoret">Eldoret</option>
-                                    <option value="Kisii">Kisii</option>
-                                    <option value="Kericho">Kericho</option>
-                                    <option value="Nyeri">Nyeri</option>
-                                    <option value="Thika">Thika</option>
-                                    <option value="Machakos">Machakos</option>
-                                    <option value="Meru">Meru</option>
-                                    <option value="Embu">Embu</option>
-                                    <option value="Kilifi">Kilifi</option>
-                                    <option value="Naivasha">Naivasha</option>
-                                    <option value="Kakamega">Kakamega</option>
-                                    <option value="Bungoma">Bungoma</option>
-                                    <option value="Kitale">Kitale</option>
-                                    <option value="Bomet">Bomet</option>
-                                    <option value="Muranga">Muranga</option>
-                                    <option value="Kajiado">Kajiado</option>
-                                    <option value="Isiolo">Isiolo</option>
-                                    <option value="Malindi">Malindi</option>
-                                    <option value="Lamu">Lamu</option>
-                                </select>
-                                <select id="aiTimeframe">
-                                    <option value="30">30 Days</option>
-                                    <option value="90" selected>90 Days</option>
-                                    <option value="180">180 Days</option>
-                                    <option value="365">1 Year</option>
-                                </select>
-                                <button class="ai-analyze-btn" onclick="analyzeWithAI()">
-                                    <i class="fas fa-brain"></i> Generate AI Insights
-                                </button>
-                            </div>
-                            <div class="ai-quick-options">
-                                <span>Quick Analysis:</span>
-                                <button onclick="quickAIAnalyze('maize', 'Nairobi', '90')">Maize in Nairobi</button>
-                                <button onclick="quickAIAnalyze('mobile phones', 'Mombasa', '30')">Phones in Mombasa</button>
-                                <button onclick="quickAIAnalyze('vegetables', 'Kisumu', '180')">Vegetables in Kisumu</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ai-badge">
-                        <i class="fas fa-brain"></i> AI-Powered Analysis
-                    </div>
-
-                    <div class="insight-cards">
-                        <div class="insight-card-large">
-                            <div class="insight-icon">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                            <div class="insight-content">
-                                <h3>Market Opportunity</h3>
-                                <div class="opportunity-score" id="opportunityScore">--</div>
-                                <p>Based on current trends and demand patterns</p>
-                            </div>
-                        </div>
-
-                        <div class="insight-card-large">
-                            <div class="insight-icon">
-                                <i class="fas fa-calendar-check"></i>
-                            </div>
-                            <div class="insight-content">
-                                <h3>Best Time to Act</h3>
-                                <div class="time-recommendation" id="bestTime">--</div>
-                                <p>Optimal timing based on seasonal patterns</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="predictions">
-                        <h3><i class="fas fa-crystal-ball"></i> Market Prediction</h3>
-                        <div class="prediction-chart">
-                            <canvas id="predictionChart"></canvas>
-                        </div>
-                        <div class="prediction-details" id="predictionDetails">
-                            <p><i class="fas fa-info-circle" style="margin-right: 8px;"></i>Enter a product above to get AI-powered predictions</p>
-                        </div>
-                    </div>
-
-                    <div class="recommendations">
-                        <h3><i class="fas fa-star"></i> Smart Recommendations</h3>
-                        <div class="recommendation-list" id="recommendationList">
-                            <div class="recommendation-item">
-                                <i class="fas fa-leaf"></i>
-                                <div>
-                                    <h4>Agricultural Products</h4>
-                                    <p>High demand in Nairobi and Mombasa markets. Seasonal patterns show peak demand Oct-Dec</p>
-                                </div>
-                                <span class="rec-score">85%</span>
-                            </div>
-                            <div class="recommendation-item">
-                                <i class="fas fa-mobile-alt"></i>
-                                <div>
-                                    <h4>Electronics & Gadgets</h4>
-                                    <p>Growing urban market segment with consistent 30% YoY growth. High margins</p>
-                                </div>
-                                <span class="rec-score">78%</span>
-                            </div>
-                            <div class="recommendation-item">
-                                <i class="fas fa-tshirt"></i>
-                                <div>
-                                    <h4>Fashion & Clothing</h4>
-                                    <p>Stable market demand with seasonal spikes during holidays and school terms</p>
-                                </div>
-                                <span class="rec-score">72%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- KENYAN MARKETS SECTION -->
-            <section id="marketsSection" class="section">
-                <div class="section-header">
-                    <h2><i class="fas fa-map-marked-alt"></i> Kenyan Markets Directory</h2>
-                    <p>Complete guide to physical markets across Kenya</p>
-                </div>
-
-                <div class="markets-directory">
-                    <div class="market-filters">
-                        <input type="text" id="marketSearch" placeholder="Search markets..." onkeyup="filterMarkets()">
-                        <select id="marketRegion" onchange="filterMarkets()">
-                            <option value="">All Regions</option>
-                            <option value="Nairobi">Nairobi</option>
-                            <option value="Mombasa">Mombasa</option>
-                            <option value="Kisumu">Kisumu</option>
-                            <option value="Nakuru">Nakuru</option>
-                            <option value="Eldoret">Eldoret</option>
-                            <option value="Kisii">Kisii</option>
-                            <option value="Kericho">Kericho</option>
-                            <option value="Nyeri">Nyeri</option>
-                            <option value="Thika">Thika</option>
-                            <option value="Machakos">Machakos</option>
-                            <option value="Meru">Meru</option>
-                            <option value="Embu">Embu</option>
-                            <option value="Kilifi">Kilifi</option>
-                            <option value="Naivasha">Naivasha</option>
-                            <option value="Kakamega">Kakamega</option>
-                            <option value="Bungoma">Bungoma</option>
-                            <option value="Kitale">Kitale</option>
-                            <option value="Bomet">Bomet</option>
-                            <option value="Muranga">Muranga</option>
-                            <option value="Kajiado">Kajiado</option>
-                            <option value="Isiolo">Isiolo</option>
-                            <option value="Malindi">Malindi</option>
-                            <option value="Lamu">Lamu</option>
-                        </select>
-                        <select id="marketType" onchange="filterMarkets()">
-                            <option value="">All Types</option>
-                            <option value="agriculture">Agriculture</option>
-                            <option value="electronics">Electronics</option>
-                            <option value="clothing">Clothing</option>
-                            <option value="general">General</option>
-                        </select>
-                    </div>
-
-                    <div class="markets-grid" id="marketsDirectory">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
-                </div>
-            </section>
-
             <!-- PROFILE SECTION -->
             <section id="profileSection" class="section">
                 <div class="section-header">
@@ -717,12 +519,6 @@
                         <button class="settings-tab active" onclick="showSettingsTab('general', event)">
                             <i class="fas fa-sliders-h"></i> General
                         </button>
-                        <button class="settings-tab" onclick="showSettingsTab('notifications', event)">
-                            <i class="fas fa-bell"></i> Notifications
-                        </button>
-                        <button class="settings-tab" onclick="showSettingsTab('privacy', event)">
-                            <i class="fas fa-shield-alt"></i> Privacy
-                        </button>
                     </div>
 
                     <div class="settings-content">
@@ -773,54 +569,6 @@
                             <button class="save-settings" onclick="saveSettings()">
                                 <i class="fas fa-save"></i> Save Settings
                             </button>
-                        </div>
-
-                        <div id="notificationsSettings" class="settings-tab-content">
-                            <h3>Notification Settings</h3>
-                            <div class="setting-item">
-                                <label class="switch">
-                                    <input type="checkbox" id="emailNotifications" checked>
-                                    <span class="slider"></span>
-                                    <span class="switch-label">Email Notifications</span>
-                                </label>
-                            </div>
-                            <div class="setting-item">
-                                <label class="switch">
-                                    <input type="checkbox" id="trendAlerts" checked>
-                                    <span class="slider"></span>
-                                    <span class="switch-label">Trend Alerts</span>
-                                </label>
-                            </div>
-                            <div class="setting-item">
-                                <label class="switch">
-                                    <input type="checkbox" id="marketUpdates">
-                                    <span class="slider"></span>
-                                    <span class="switch-label">Market Updates</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="privacySettings" class="settings-tab-content">
-                            <h3>Privacy Settings</h3>
-                            <div class="setting-item">
-                                <label class="switch">
-                                    <input type="checkbox" id="dataCollection" checked>
-                                    <span class="slider"></span>
-                                    <span class="switch-label">Allow Data Collection</span>
-                                </label>
-                            </div>
-                            <div class="setting-item">
-                                <label class="switch">
-                                    <input type="checkbox" id="personalizedAds">
-                                    <span class="slider"></span>
-                                    <span class="switch-label">Personalized Ads</span>
-                                </label>
-                            </div>
-                            <div class="setting-item">
-                                <button class="btn btn-danger" onclick="deleteAccountData()">
-                                    <i class="fas fa-trash"></i> Delete Account Data
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -955,124 +703,6 @@
             document.getElementById('dashboardRegion').value = region;
             
             performSearch(product, 'dashboard');
-        }
-        
-        // Analyze with AI
-        function analyzeWithAI() {
-            const product = document.getElementById('aiProductInput').value.trim();
-            const region = document.getElementById('aiRegionSelect').value;
-            const timeframe = document.getElementById('aiTimeframe').value;
-            
-            if (!product) {
-                showToast('Please enter a product name', 'warning');
-                document.getElementById('aiProductInput').focus();
-                return;
-            }
-            
-            generateAIInsights(product, region, timeframe);
-        }
-        
-        // Quick AI analyze
-        function quickAIAnalyze(product, region, timeframe) {
-            document.getElementById('aiProductInput').value = product;
-            document.getElementById('aiRegionSelect').value = region;
-            document.getElementById('aiTimeframe').value = timeframe;
-            
-            generateAIInsights(product, region, timeframe);
-        }
-        
-        // Generate AI Insights
-        function generateAIInsights(product, region, timeframe) {
-            showLoading(`Analyzing ${product} in ${region}...`);
-            
-            // Simulate AI analysis
-            setTimeout(() => {
-                hideLoading();
-                
-                // Generate random scores
-                const opportunityScore = Math.floor(Math.random() * 30) + 60;
-                const trendScore = Math.floor(Math.random() * 30) + 50;
-                const riskScore = Math.floor(Math.random() * 30) + 40;
-                
-                // Update opportunity score
-                document.getElementById('opportunityScore').textContent = opportunityScore + '%';
-                
-                // Update time recommendation based on timeframe
-                let bestTime = 'Good time to invest';
-                if (timeframe === '30') bestTime = 'Next 30 days optimal';
-                else if (timeframe === '90') bestTime = 'Q3-Q4 peak season';
-                else if (timeframe === '180') bestTime = 'Next 6 months favorable';
-                else bestTime = 'Year-round opportunity';
-                
-                document.getElementById('bestTime').textContent = bestTime;
-                
-                // Update prediction details
-                const predictionDetails = document.getElementById('predictionDetails');
-                if (predictionDetails) {
-                    predictionDetails.innerHTML = `
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-                            <div style="background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #10B981;">
-                                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Trend Score</div>
-                                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${trendScore}%</div>
-                            </div>
-                            <div style="background: rgba(79, 70, 229, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #4F46E5;">
-                                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Risk Assessment</div>
-                                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${riskScore}%</div>
-                            </div>
-                            <div style="background: rgba(245, 158, 11, 0.1); padding: 12px; border-radius: 8px; border-left: 3px solid #F59E0B;">
-                                <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">Region Focus</div>
-                                <div style="font-size: 16px; font-weight: 700; color: #1F2937;">${region}</div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 16px; font-size: 14px; color: var(--dark); line-height: 1.6;">
-                            <p><strong>AI Insights:</strong> ${product} shows strong potential in ${region} with ${opportunityScore}% opportunity score. Recommended action timeframe: ${timeframe} days.</p>
-                        </div>
-                    `;
-                }
-                
-                // Update recommendations
-                const recommendationList = document.getElementById('recommendationList');
-                if (recommendationList) {
-                    const recommendations = [
-                        {
-                            icon: 'fa-leaf',
-                            title: 'Market Entry Strategy',
-                            description: `Focus on ${region} markets first, expand gradually`,
-                            score: opportunityScore + '%'
-                        },
-                        {
-                            icon: 'fa-calendar-alt',
-                            title: 'Timing Strategy',
-                            description: `Optimize for ${timeframe}-day cycles in ${region}`,
-                            score: '85%'
-                        },
-                        {
-                            icon: 'fa-chart-pie',
-                            title: 'Pricing Strategy',
-                            description: 'Competitive pricing with 15-20% margin recommended',
-                            score: '78%'
-                        }
-                    ];
-                    
-                    recommendationList.innerHTML = recommendations.map(rec => `
-                        <div class="recommendation-item">
-                            <i class="fas ${rec.icon}"></i>
-                            <div>
-                                <h4>${rec.title}</h4>
-                                <p>${rec.description}</p>
-                            </div>
-                            <span class="rec-score">${rec.score}</span>
-                        </div>
-                    `).join('');
-                }
-                
-                // Update prediction chart
-                if (window.updatePredictionChart) {
-                    window.updatePredictionChart(product, region, timeframe);
-                }
-                
-                showToast(`AI insights generated for ${product} in ${region}`, 'success');
-            }, 1500);
         }
         
         // Export chart as PDF
