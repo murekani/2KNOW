@@ -386,21 +386,23 @@ async def change_password(
             detail=f"Failed to change password: {str(e)}"
         )
 
-# Public trends endpoint (no auth required)
+# Public trends endpoint with region support
 @app.get("/trends/{keyword}")
-async def get_public_trends(keyword: str):
+async def get_public_trends(keyword: str, region: str = "KE"):
     """
-    Public endpoint for trend analysis
+    Public endpoint for trend analysis with region-based predictions
+    Query params: keyword (required), region (optional, default: KE)
     """
     try:
-        print(f"🔍 Analyzing trends for: {keyword}")
-        result = await get_trend_analysis(keyword)
+        print(f"🔍 Analyzing trends for: {keyword} in {region}")
+        result = await get_trend_analysis(keyword, region=region)
         return result
     except Exception as e:
         print(f"❌ Error analyzing trends: {e}")
         # Return demo data for testing if real API fails
-        return {
+        region_data = {
             "keyword": keyword,
+            "region": region,
             "live_trend_score": 75,
             "historical_trends": [
                 {"date": "2024-01", "value": 65},
@@ -411,11 +413,12 @@ async def get_public_trends(keyword: str):
                 {"date": "2024-06", "value": 78}
             ],
             "market_sector": "Agriculture" if "maize" in keyword.lower() else "Electronics" if "phone" in keyword.lower() else "General",
-            "relevant_markets": ["Nairobi Market", "Mombasa", "Kisumu"],
+            "relevant_markets": ["Nairobi Market", "Mombasa", "Kisumu"] if region == "KE" else ["Local Market"],
             "overall_score": 75,
             "data_source": "Demo Data",
             "country": "Kenya"
         }
+        return region_data
 
 # Protected trends endpoint (requires JWT)
 @app.get("/api/trends/{keyword}")
@@ -462,6 +465,15 @@ async def get_users(db: Session = Depends(get_db)):
             for u in users
         ]
     }
+
+# Debug: trends metrics (cache hits, retries, 429s, fallbacks)
+@app.get("/debug/trends-metrics")
+async def debug_trends_metrics():
+    try:
+        from .services.google_trends_service import get_trends_metrics
+        return get_trends_metrics()
+    except Exception as e:
+        return {"error": str(e)}
 
 # Test database connection
 @app.get("/test/db")

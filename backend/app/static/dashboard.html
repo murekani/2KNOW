@@ -6,6 +6,7 @@
     <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="pragma" content="no-cache">
     <meta http-equiv="expires" content="0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%234F46E5'>2</text></svg>">
     <title>2KNOW - Market Dashboard</title>
     <link rel="stylesheet" href="css/style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -72,36 +73,6 @@
                 <p class="subtitle" id="pageSubtitle">Real-time trend analysis for Kenyan markets</p>
             </div>
             <div class="header-actions">
-                <!-- Region Selector for Dashboard -->
-                <div class="region-selector" id="dashboardRegionSelector">
-                    <select id="dashboardRegion" onchange="analyzeWithRegion()">
-                        <option value="KE">All Kenya</option>
-                        <option value="Nairobi">Nairobi</option>
-                        <option value="Mombasa">Mombasa</option>
-                        <option value="Kisumu">Kisumu</option>
-                        <option value="Nakuru">Nakuru</option>
-                        <option value="Eldoret">Eldoret</option>
-                        <option value="Kisii">Kisii</option>
-                        <option value="Kericho">Kericho</option>
-                        <option value="Nyeri">Nyeri</option>
-                        <option value="Thika">Thika</option>
-                        <option value="Machakos">Machakos</option>
-                        <option value="Meru">Meru</option>
-                        <option value="Embu">Embu</option>
-                        <option value="Kilifi">Kilifi</option>
-                        <option value="Naivasha">Naivasha</option>
-                        <option value="Kakamega">Kakamega</option>
-                        <option value="Bungoma">Bungoma</option>
-                        <option value="Kitale">Kitale</option>
-                        <option value="Bomet">Bomet</option>
-                        <option value="Muranga">Muranga</option>
-                        <option value="Kajiado">Kajiado</option>
-                        <option value="Isiolo">Isiolo</option>
-                        <option value="Malindi">Malindi</option>
-                        <option value="Lamu">Lamu</option>
-                    </select>
-                </div>
-                
                 <div class="date-display">
                     <i class="fas fa-calendar-alt"></i>
                     <span id="currentDate">Loading...</span>
@@ -133,29 +104,6 @@
                             <input type="text" id="dashboardProductInput" placeholder="Enter product name (e.g., maize, smartphones)">
                             <select id="dashboardRegionSelect">
                                 <option value="KE">All Kenya</option>
-                                <option value="Nairobi">Nairobi</option>
-                                <option value="Mombasa">Mombasa</option>
-                                <option value="Kisumu">Kisumu</option>
-                                <option value="Nakuru">Nakuru</option>
-                                <option value="Eldoret">Eldoret</option>
-                                <option value="Kisii">Kisii</option>
-                                <option value="Kericho">Kericho</option>
-                                <option value="Nyeri">Nyeri</option>
-                                <option value="Thika">Thika</option>
-                                <option value="Machakos">Machakos</option>
-                                <option value="Meru">Meru</option>
-                                <option value="Embu">Embu</option>
-                                <option value="Kilifi">Kilifi</option>
-                                <option value="Naivasha">Naivasha</option>
-                                <option value="Kakamega">Kakamega</option>
-                                <option value="Bungoma">Bungoma</option>
-                                <option value="Kitale">Kitale</option>
-                                <option value="Bomet">Bomet</option>
-                                <option value="Muranga">Muranga</option>
-                                <option value="Kajiado">Kajiado</option>
-                                <option value="Isiolo">Isiolo</option>
-                                <option value="Malindi">Malindi</option>
-                                <option value="Lamu">Lamu</option>
                             </select>
                             <button class="analyze-btn" onclick="analyzeDashboardProduct()">
                                 <i class="fas fa-chart-line"></i> Analyze Now
@@ -163,10 +111,10 @@
                         </div>
                         <div class="quick-suggestions">
                             <span>Quick picks:</span>
-                            <button onclick="quickAnalyze('maize', 'KE')">Maize</button>
-                            <button onclick="quickAnalyze('mobile phones', 'Nairobi')">Phones</button>
-                            <button onclick="quickAnalyze('vegetables', 'Mombasa')">Vegetables</button>
-                            <button onclick="quickAnalyze('second hand cars', 'Nakuru')">Used Cars</button>
+                            <button onclick="quickAnalyze('maize')">Maize</button>
+                            <button onclick="quickAnalyze('mobile phones')">Phones</button>
+                            <button onclick="quickAnalyze('vegetables')">Vegetables</button>
+                            <button onclick="quickAnalyze('second hand cars')">Used Cars</button>
                         </div>
                     </div>
                 </div>
@@ -329,24 +277,7 @@
                             <label for="regionFilter"><i class="fas fa-map-marker-alt"></i> Region</label>
                             <select id="regionFilter">
                                 <option value="KE">All Kenya</option>
-                                <option value="Nairobi">Nairobi</option>
-                                <option value="Mombasa">Mombasa</option>
-                                <option value="Kisumu">Kisumu</option>
-                                <option value="Nakuru">Nakuru</option>
-                                <option value="Eldoret">Eldoret</option>
-                                <option value="Kisii">Kisii</option>
-                                <option value="Kericho">Kericho</option>
-                                <option value="Nyeri">Nyeri</option>
-                                <option value="Thika">Thika</option>
-                                <option value="Machakos">Machakos</option>
-                                <option value="Meru">Meru</option>
-                                <option value="Embu">Embu</option>
-                                <option value="Kilifi">Kilifi</option>
-                                <option value="Naivasha">Naivasha</option>
-                                <option value="Kakamega">Kakamega</option>
-                                <option value="Bungoma">Bungoma</option>
-                                <option value="Kitale">Kitale</option>
-                                <option value="Bomet">Bomet</option>
+                            </select>
                                 <option value="Muranga">Muranga</option>
                                 <option value="Kajiado">Kajiado</option>
                                 <option value="Isiolo">Isiolo</option>
@@ -448,6 +379,7 @@
                             <div class="profile-info">
                                 <h3 id="profileName">Loading...</h3>
                                 <p id="profileEmail">Loading...</p>
+                                <p id="profileAbout" class="profile-about">--</p>
                                 <div class="member-since">
                                     <i class="fas fa-calendar"></i>
                                     Member since: <span id="memberSince">--</span>
@@ -541,29 +473,6 @@
                                 <label for="regionSetting">Default Region</label>
                                 <select id="regionSetting">
                                     <option value="KE">All Kenya</option>
-                                    <option value="Nairobi">Nairobi</option>
-                                    <option value="Mombasa">Mombasa</option>
-                                    <option value="Kisumu">Kisumu</option>
-                                    <option value="Nakuru">Nakuru</option>
-                                    <option value="Eldoret">Eldoret</option>
-                                    <option value="Kisii">Kisii</option>
-                                    <option value="Kericho">Kericho</option>
-                                    <option value="Nyeri">Nyeri</option>
-                                    <option value="Thika">Thika</option>
-                                    <option value="Machakos">Machakos</option>
-                                    <option value="Meru">Meru</option>
-                                    <option value="Embu">Embu</option>
-                                    <option value="Kilifi">Kilifi</option>
-                                    <option value="Naivasha">Naivasha</option>
-                                    <option value="Kakamega">Kakamega</option>
-                                    <option value="Bungoma">Bungoma</option>
-                                    <option value="Kitale">Kitale</option>
-                                    <option value="Bomet">Bomet</option>
-                                    <option value="Muranga">Muranga</option>
-                                    <option value="Kajiado">Kajiado</option>
-                                    <option value="Isiolo">Isiolo</option>
-                                    <option value="Malindi">Malindi</option>
-                                    <option value="Lamu">Lamu</option>
                                 </select>
                             </div>
                             <button class="save-settings" onclick="saveSettings()">
@@ -664,7 +573,9 @@
         
         // Analyze with selected region
         function analyzeWithRegion() {
-            const region = document.getElementById('dashboardRegion').value;
+            // Get region from the dashboard section's region selector
+            const dashboardRegion = document.getElementById('dashboardRegionSelect');
+            const region = dashboardRegion ? dashboardRegion.value : 'KE';
             const keyword = document.getElementById('keywordInput').value.trim();
             
             if (!keyword) {
@@ -673,13 +584,15 @@
                 return;
             }
             
-            performSearch(keyword, 'dashboard');
+            performSearch(keyword, region, 'dashboard');
         }
         
         // Quick analyze from dashboard
         function analyzeDashboardProduct() {
             const product = document.getElementById('dashboardProductInput').value.trim();
-            const region = document.getElementById('dashboardRegionSelect').value;
+            // Get region from the dashboard section's region selector
+            const dashboardRegion = document.getElementById('dashboardRegionSelect');
+            const region = dashboardRegion ? dashboardRegion.value : 'KE';
             
             if (!product) {
                 showToast('Please enter a product name', 'warning');
@@ -687,22 +600,25 @@
                 return;
             }
             
-            // Update main search input
-            document.getElementById('keywordInput').value = product;
-            document.getElementById('dashboardRegion').value = region;
+            // Update main search input (if present)
+            const mainKeywordEl = document.getElementById('keywordInput');
+            if (mainKeywordEl) mainKeywordEl.value = product;
             
             // Perform analysis
-            performSearch(product, 'dashboard');
+            performSearch(product, region, 'dashboard');
         }
         
         // Quick analyze function
-        function quickAnalyze(product, region) {
-            document.getElementById('dashboardProductInput').value = product;
-            document.getElementById('dashboardRegionSelect').value = region;
-            document.getElementById('keywordInput').value = product;
-            document.getElementById('dashboardRegion').value = region;
+        function quickAnalyze(product) {
+            // Get region from the dashboard section's region selector
+            const dashboardRegion = document.getElementById('dashboardRegionSelect');
+            const region = dashboardRegion ? dashboardRegion.value : 'KE';
             
-            performSearch(product, 'dashboard');
+            document.getElementById('dashboardProductInput').value = product;
+            const mainKeywordEl = document.getElementById('keywordInput');
+            if (mainKeywordEl) mainKeywordEl.value = product;
+            
+            performSearch(product, region, 'dashboard');
         }
         
         // Export chart as PDF
@@ -843,7 +759,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Profile Settings</h2>
-                <button class="modal-close" onclick="closeProfileModal()">×</button>
+                <button type="button" class="modal-close" onclick="closeProfileModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="profile-section">
@@ -871,11 +787,15 @@
                         <label>Searches Conducted</label>
                         <p id="modalSearchCount">0</p>
                     </div>
+                    <div class="info-item">
+                        <label>About</label>
+                        <p id="modalProfileBio">Loading...</p>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeProfileModal()">Close</button>
-                <button class="btn btn-danger" onclick="logout()">Logout</button>
+                <button type="button" class="btn btn-secondary" onclick="closeProfileModal()">Close</button>
+                <button type="button" class="btn btn-danger" onclick="logout()">Logout</button>
             </div>
         </div>
     </div>

@@ -9,34 +9,78 @@ load_dotenv()
 
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 
-async def get_serper_data(keyword: str, country: str = "ke"):
+async def get_serper_data(keyword: str, country: str = "ke", region: str = "KE"):
     """
-    Fetch real-time search data for a keyword in Kenya.
-    Returns relevance score and market insights.
+    Fetch real-time search data for a keyword in a specific Kenyan region.
+    Returns relevance score and market insights adjusted for the region.
     """
-    # If no API key, return demo data with clear warning
+    # Region-specific adjustments for search
+    region_queries = {
+        "Nairobi": f"{keyword} Nairobi Kenya market",
+        "Mombasa": f"{keyword} Mombasa Kenya coast market",
+        "Kisumu": f"{keyword} Kisumu Lake Victoria market",
+        "Nakuru": f"{keyword} Nakuru Rift Valley market",
+        "Eldoret": f"{keyword} Eldoret Kenya market",
+        "Kisii": f"{keyword} Kisii Kenya market",
+        "Kericho": f"{keyword} Kericho Kenya market",
+        "Nyeri": f"{keyword} Nyeri Central Kenya market",
+        "Meru": f"{keyword} Meru Kenya market",
+        "KE": f"{keyword} market Kenya"
+    }
+    
+    # If no API key, return demo data with region-specific insights
     if not SERPER_API_KEY or SERPER_API_KEY == "not-set-yet":
-        print(f"⚠️  SERPER_API_KEY not set. Using demo data for: {keyword}")
+        print(f"⚠️  SERPER_API_KEY not set. Using demo data for: {keyword} in {region}")
+        
+        # Region-specific relevance scores
+        region_modifiers = {
+            "Nairobi": 0.95,
+            "Mombasa": 0.85,
+            "Kisumu": 0.80,
+            "Nakuru": 0.75,
+            "Eldoret": 0.70,
+            "Kisii": 0.65,
+            "Kericho": 0.65,
+            "Nyeri": 0.70,
+            "Meru": 0.70,
+            "KE": 1.0
+        }
+        
+        modifier = region_modifiers.get(region, 0.75)
         
         # Demo relevance score based on keyword
         if "maize" in keyword.lower():
-            relevance_score = 75
+            base_relevance = 75
             market_sector = "Agriculture"
-            regions = ["Nairobi", "Nakuru", "Kisumu"]
         elif "phone" in keyword.lower():
-            relevance_score = 65
+            base_relevance = 65
             market_sector = "Electronics"
+        else:
+            base_relevance = random.randint(40, 60)
+            market_sector = "General"
+        
+        relevance_score = base_relevance * modifier
+        
+        # Region-specific markets
+        if region == "Nairobi":
+            regions = ["Nairobi", "Thika", "Machakos"]
+        elif region == "Mombasa":
+            regions = ["Mombasa", "Malindi", "Kilifi"]
+        elif region == "Kisumu":
+            regions = ["Kisumu", "Siaya", "Kisii"]
+        elif region == "Nakuru":
+            regions = ["Nakuru", "Naivasha", "Eldoret"]
+        elif region == "KE":
             regions = ["Nairobi", "Mombasa", "Kisumu"]
         else:
-            relevance_score = random.randint(40, 60)
-            market_sector = "General"
-            regions = ["Nairobi", "Mombasa", "Eldoret"]
+            regions = [region]
         
         return {
             "relevance_score": relevance_score,
             "market_sector": market_sector,
             "regions": regions,
-            "note": "Demo data - Add SERPER_API_KEY in .env for real data"
+            "region": region,
+            "note": f"Demo data for {region} - Add SERPER_API_KEY in .env for real data"
         }
     
     # REAL API CALL (when you add your key)
@@ -45,8 +89,10 @@ async def get_serper_data(keyword: str, country: str = "ke"):
         'Content-Type': 'application/json'
     }
     
+    # Bias Serper query by region when provided to get region-specific relevance
+    query_text = f"{keyword} market Kenya" if region == 'KE' else f"{keyword} {region} market Kenya"
     payload = {
-        "q": f"{keyword} market Kenya",
+        "q": query_text,
         "gl": country,  # Kenya
         "hl": "en"
     }

@@ -482,9 +482,190 @@ function loadTrendComparisons() {
         updateComparisonInsights(data.product1, data.product2);
     }
 }
+
+// ===== ADDED EXPORT FUNCTIONALITY =====
+
+// Export current trend chart as image
+function exportChartAsImage(chartType = 'trend') {
+    let chartToExport;
+    let filenamePrefix;
+    
+    // Determine which chart to export
+    switch(chartType) {
+        case 'trend':
+            chartToExport = trendChart;
+            filenamePrefix = '2KNOW-trend-chart';
+            break;
+        case 'comparison1':
+            chartToExport = comparisonChart1;
+            filenamePrefix = '2KNOW-comparison-chart-1';
+            break;
+        case 'comparison2':
+            chartToExport = comparisonChart2;
+            filenamePrefix = '2KNOW-comparison-chart-2';
+            break;
+        case 'prediction':
+            chartToExport = predictionChart;
+            filenamePrefix = '2KNOW-prediction-chart';
+            break;
+        default:
+            chartToExport = trendChart;
+            filenamePrefix = '2KNOW-chart';
+    }
+    
+    if (!chartToExport) {
+        showToast(`No ${chartType} chart available to export`, 'warning');
+        return;
+    }
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const filename = `${filenamePrefix}-${timestamp}.png`;
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = chartToExport.toBase64Image();
+    link.click();
+    
+    showToast(`Chart exported as ${filename}`, 'success');
+}
+
+// Export comparison as combined image
+function exportComparisonAsImage() {
+    if (!comparisonChart1 || !comparisonChart2) {
+        showToast('Comparison charts not available for export', 'warning');
+        return;
+    }
+    
+    // Create a canvas to combine both charts
+    const combinedCanvas = document.createElement('canvas');
+    const ctx = combinedCanvas.getContext('2d');
+    
+    // Set dimensions for combined image
+    combinedCanvas.width = comparisonChart1.width * 2;
+    combinedCanvas.height = comparisonChart1.height;
+    
+    // Draw first chart
+    ctx.drawImage(comparisonChart1.canvas, 0, 0);
+    
+    // Draw second chart
+    ctx.drawImage(comparisonChart2.canvas, comparisonChart1.width, 0);
+    
+    // Create download link
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const filename = `2KNOW-comparison-${timestamp}.png`;
+    
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = combinedCanvas.toDataURL('image/png');
+    link.click();
+    
+    showToast('Comparison exported as combined image', 'success');
+}
+
+// Add export buttons to UI dynamically
+function addExportButtons() {
+    // Add export button to trend chart container
+    const trendContainer = document.querySelector('.chart-container');
+    if (trendContainer && !document.getElementById('exportTrendBtn')) {
+        const exportBtn = document.createElement('button');
+        exportBtn.id = 'exportTrendBtn';
+        exportBtn.className = 'export-btn';
+        exportBtn.innerHTML = '<i class="fas fa-download"></i> Export Chart';
+        exportBtn.onclick = () => exportChartAsImage('trend');
+        
+        // Add to chart header or controls
+        const chartHeader = trendContainer.querySelector('.chart-header');
+        if (chartHeader) {
+            chartHeader.appendChild(exportBtn);
+        } else {
+            trendContainer.insertBefore(exportBtn, trendContainer.firstChild);
+        }
+    }
+    
+    // Add export buttons to comparison section
+    const comparisonContainer = document.getElementById('comparisonInsights');
+    if (comparisonContainer && !document.getElementById('exportComparisonBtn')) {
+        const exportBtn = document.createElement('button');
+        exportBtn.id = 'exportComparisonBtn';
+        exportBtn.className = 'export-btn';
+        exportBtn.innerHTML = '<i class="fas fa-download"></i> Export Comparison';
+        exportBtn.onclick = exportComparisonAsImage;
+        
+        const header = comparisonContainer.previousElementSibling;
+        if (header && header.classList.contains('section-header')) {
+            header.appendChild(exportBtn);
+        }
+    }
+}
+
+// Initialize export functionality
+function initExportFunctionality() {
+    // Add export buttons to UI
+    setTimeout(addExportButtons, 500); // Wait for charts to load
+    
+    // Add CSS for export buttons
+    if (!document.getElementById('exportButtonStyles')) {
+        const style = document.createElement('style');
+        style.id = 'exportButtonStyles';
+        style.textContent = `
+            .export-btn {
+                background: linear-gradient(135deg, #4F46E5, #7C3AED);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.3s;
+                margin-left: auto;
+            }
+            .export-btn:hover {
+                background: linear-gradient(135deg, #4338CA, #6D28D9);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            }
+            .export-btn i {
+                font-size: 16px;
+            }
+            .chart-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 16px;
+            }
+            .section-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 16px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// ===== INITIALIZATION =====
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initChart();
+    initPredictionChart();
+    initExportFunctionality();
+    
+    // Load any saved comparisons
+    loadTrendComparisons();
+});
+
 // Expose functions globally
 window.initChart = initChart;
 window.updateTrendChart = updateTrendChart;
 window.updateChartStats = updateChartStats;
 window.updateChartRange = updateChartRange;
 window.loadTrendComparisons = loadTrendComparisons;
+window.exportChartAsImage = exportChartAsImage;
+window.exportComparisonAsImage = exportComparisonAsImage;
+window.addExportButtons = addExportButtons;s

@@ -6,6 +6,82 @@ let currentData = null;
 let searchHistory = [];
 let marketDirectory = [];
 
+// Active region (persisted preference)
+let activeRegion = localStorage.getItem('region_preference') || 'KE';
+
+// Canonical list of Kenyan counties (47) + All Kenya
+const KENYA_REGIONS = [
+    { code: 'KE', name: 'All Kenya' },
+    { code: 'Baringo', name: 'Baringo' },
+    { code: 'Bomet', name: 'Bomet' },
+    { code: 'Bungoma', name: 'Bungoma' },
+    { code: 'Busia', name: 'Busia' },
+    { code: 'Elgeyo-Marakwet', name: 'Elgeyo-Marakwet' },
+    { code: 'Embu', name: 'Embu' },
+    { code: 'Garissa', name: 'Garissa' },
+    { code: 'Homa Bay', name: 'Homa Bay' },
+    { code: 'Isiolo', name: 'Isiolo' },
+    { code: 'Kajiado', name: 'Kajiado' },
+    { code: 'Kakamega', name: 'Kakamega' },
+    { code: 'Kericho', name: 'Kericho' },
+    { code: 'Kiambu', name: 'Kiambu' },
+    { code: 'Kilifi', name: 'Kilifi' },
+    { code: 'Kirinyaga', name: 'Kirinyaga' },
+    { code: 'Kisii', name: 'Kisii' },
+    { code: 'Kisumu', name: 'Kisumu' },
+    { code: 'Kitui', name: 'Kitui' },
+    { code: 'Kwale', name: 'Kwale' },
+    { code: 'Laikipia', name: 'Laikipia' },
+    { code: 'Lamu', name: 'Lamu' },
+    { code: 'Machakos', name: 'Machakos' },
+    { code: 'Makueni', name: 'Makueni' },
+    { code: 'Mandera', name: 'Mandera' },
+    { code: 'Marsabit', name: 'Marsabit' },
+    { code: 'Meru', name: 'Meru' },
+    { code: 'Migori', name: 'Migori' },
+    { code: 'Mombasa', name: 'Mombasa' },
+    { code: 'Muranga', name: 'Muranga' },
+    { code: 'Nairobi', name: 'Nairobi' },
+    { code: 'Nakuru', name: 'Nakuru' },
+    { code: 'Nandi', name: 'Nandi' },
+    { code: 'Narok', name: 'Narok' },
+    { code: 'Nyamira', name: 'Nyamira' },
+    { code: 'Nyandarua', name: 'Nyandarua' },
+    { code: 'Nyeri', name: 'Nyeri' },
+    { code: 'Samburu', name: 'Samburu' },
+    { code: 'Siaya', name: 'Siaya' },
+    { code: 'Taita-Taveta', name: 'Taita-Taveta' },
+    { code: 'Tana River', name: 'Tana River' },
+    { code: 'Tharaka-Nithi', name: 'Tharaka-Nithi' },
+    { code: 'Trans-Nzoia', name: 'Trans-Nzoia' },
+    { code: 'Turkana', name: 'Turkana' },
+    { code: 'Uasin Gishu', name: 'Uasin Gishu' },
+    { code: 'Vihiga', name: 'Vihiga' },
+    { code: 'Wajir', name: 'Wajir' },
+    { code: 'West Pokot', name: 'West Pokot' }
+];
+
+// Populate region selectors from KENYA_REGIONS for consistent options
+function populateRegionSelectors() {
+    const ids = ['dashboardRegionSelect', 'regionFilter', 'regionSetting'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = '';
+        KENYA_REGIONS.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.code;
+            opt.textContent = r.name;
+            el.appendChild(opt);
+        });
+        el.value = activeRegion;
+        el.addEventListener('change', function() {
+            activeRegion = el.value;
+            localStorage.setItem('region_preference', activeRegion);
+        });
+    });
+}
+
 // Toggle Sidebar with content shifting
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -36,15 +112,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const overlay = document.getElementById('sidebarOverlay');
             const mainContent = document.querySelector('.main-content');
             
-            // Close sidebar if it's expanded on mobile
-            if (window.innerWidth < 769) {
-                sidebar.classList.add('collapsed');
-                overlay.classList.remove('active');
-            } else {
-                // On desktop, keep sidebar open but handle clicks
-                if (!sidebar.classList.contains('collapsed')) {
-                    // Already open, just navigate
-                }
+            // Close sidebar after navigation (useful on mobile and desktop to focus content)
+            sidebar.classList.add('collapsed');
+            overlay.classList.remove('active');
+            // Reset main content layout
+            if (mainContent) {
+                mainContent.style.marginLeft = '0';
+                mainContent.style.width = '100%';
             }
         });
     });
@@ -56,12 +130,28 @@ document.addEventListener('DOMContentLoaded', function() {
             logout();
         });
     }
+
+    // Populate the three region selectors from canonical list
+    populateRegionSelectors();
 });
 
 // Show different sections
 function showSection(sectionId, event) {
     if (event) {
         event.preventDefault();
+    }
+
+    // Ensure sidebar collapses when navigating to a section (handles inline onclick navigation)
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const mainContent = document.querySelector('.main-content');
+    if (sidebar && !sidebar.classList.contains('collapsed')) {
+        sidebar.classList.add('collapsed');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        if (mainContent) {
+            mainContent.style.marginLeft = '0';
+            mainContent.style.width = '100%';
+        }
     }
     
     // Hide all sections
@@ -120,25 +210,30 @@ function showSection(sectionId, event) {
     }
 }
 
-// Search trends from dashboard
+// Search trends (bound to header search previously). Now uses dashboard product input if header is not present
 async function searchTrends() {
-    const keywordInput = document.getElementById('keywordInput');
-    const keyword = keywordInput.value.trim();
-    const region = document.getElementById('dashboardRegion').value;
-    
-    if (!keyword) {
+    // Prefer dashboard product input
+    const dashboardInput = document.getElementById('dashboardProductInput');
+    const product = dashboardInput ? dashboardInput.value.trim() : '';
+
+    const regionSelector = document.getElementById('dashboardRegionSelect');
+    const region = regionSelector ? regionSelector.value : activeRegion;
+
+    if (!product) {
         showToast('Please enter a product name to analyze', 'warning');
-        keywordInput.focus();
+        if (dashboardInput) dashboardInput.focus();
         return;
     }
-    
-    await performSearch(keyword, region, 'dashboard');
+
+    await performSearch(product, region, 'dashboard');
 }
 
 // Search from advanced search section
 async function searchFromAdvanced() {
     const keyword = document.getElementById('advancedKeyword').value.trim();
-    const region = document.getElementById('regionFilter').value;
+    // Get region from the search filters dropdown
+    const regionFilter = document.getElementById('regionFilter');
+    const region = regionFilter ? regionFilter.value : activeRegion;
     const timeRange = document.getElementById('timeFilter').value;
     
     if (!keyword) {
@@ -157,7 +252,7 @@ async function performAdvancedSearch(keyword, region = 'KE', timeRange = '6') {
         const token = localStorage.getItem('jwt_token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         
-        const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
+        const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}?region=${encodeURIComponent(region)}`, {
             headers: headers
         });
         
@@ -655,7 +750,8 @@ async function performSearch(keyword, region = 'KE', source = 'dashboard') {
         const token = localStorage.getItem('jwt_token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         
-        const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
+        // Include region parameter in the API call
+        const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}?region=${encodeURIComponent(region)}`, {
             headers: headers
         });
         
@@ -961,13 +1057,16 @@ async function compareTrends() {
         return;
     }
     
+    // Get selected region from settings or use default
+    const region = localStorage.getItem('app_region') || 'KE';
+    
     showLoading(`Comparing ${trend1} vs ${trend2}...`);
     
     try {
-        // Fetch data for both products
+        // Fetch data for both products with region
         const [data1, data2] = await Promise.all([
-            fetchTrendData(trend1),
-            fetchTrendData(trend2)
+            fetchTrendData(trend1, region),
+            fetchTrendData(trend2, region)
         ]);
         
         // Update charts
@@ -987,11 +1086,11 @@ async function compareTrends() {
 }
 
 // Fetch trend data for comparison
-async function fetchTrendData(keyword) {
+async function fetchTrendData(keyword, region = 'KE') {
     const token = localStorage.getItem('jwt_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}`, {
+    const response = await fetch(`${API_URL}/trends/${encodeURIComponent(keyword)}?region=${encodeURIComponent(region)}`, {
         headers: headers
     });
     
@@ -1153,9 +1252,12 @@ function filterMarkets() {
 function loadProfileData() {
     const userName = localStorage.getItem('user_name') || 'User';
     const userEmail = localStorage.getItem('user_email') || 'user@example.com';
+    const userBio = localStorage.getItem('user_bio') || '';
     
     document.getElementById('profileName').textContent = userName;
     document.getElementById('profileEmail').textContent = userEmail;
+    const profileAboutEl = document.getElementById('profileAbout');
+    if (profileAboutEl) profileAboutEl.textContent = userBio || '—';
     
     // Update sidebar user info
     const sidebarUserName = document.getElementById('sidebarUserName');
@@ -1315,7 +1417,7 @@ function showEditProfile() {
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Edit Profile</h2>
-                <button class="modal-close" onclick="closeModal('editProfileModal')">
+                <button type="button" class="modal-close" onclick="appCloseModal('editProfileModal')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1330,14 +1432,14 @@ function showEditProfile() {
                         <input type="email" id="editEmail" class="form-input" value="${userEmail}" required>
                     </div>
                     <div class="form-group">
-                        <label for="editBio">Bio</label>
-                        <textarea id="editBio" class="form-input" rows="4" placeholder="Tell us about yourself...">${userBio}</textarea>
+                        <label for="editBio">About</label>
+                        <textarea id="editBio" class="form-input" rows="4" placeholder="A short summary about you...">${userBio}</textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('editProfileModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="saveEditProfile()">Save Changes</button>
+                <button type="button" class="btn btn-secondary" onclick="appCloseModal('editProfileModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditProfile()">Save Changes</button>
             </div>
         </div>
     `;
@@ -1348,8 +1450,9 @@ function showEditProfile() {
     // Add overlay
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.id = 'editProfileOverlay';
-    overlay.onclick = () => closeModal('editProfileModal');
+    // Use a predictable overlay id that matches the modal id so closeModal can find it
+    overlay.id = modal.id + 'Overlay';
+    overlay.onclick = () => appCloseModal(modal.id);
     document.body.appendChild(overlay);
     overlay.classList.add('active');
 }
@@ -1379,7 +1482,7 @@ function saveEditProfile() {
     loadProfileData();
     
     // Close modal
-    closeModal('editProfileModal');
+    appCloseModal('editProfileModal');
     
     showToast('Profile updated successfully', 'success');
 }
@@ -1393,7 +1496,7 @@ function changePassword() {
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
                 <h2>Change Password</h2>
-                <button class="modal-close" onclick="closeModal('changePasswordModal')">
+                <button type="button" class="modal-close" onclick="appCloseModal('changePasswordModal')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1415,8 +1518,8 @@ function changePassword() {
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('changePasswordModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="saveNewPassword()">Update Password</button>
+                <button type="button" class="btn btn-secondary" onclick="appCloseModal('changePasswordModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveNewPassword()">Update Password</button>
             </div>
         </div>
     `;
@@ -1427,8 +1530,9 @@ function changePassword() {
     // Add overlay
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.id = 'changePasswordOverlay';
-    overlay.onclick = () => closeModal('changePasswordModal');
+    // Use a predictable overlay id that matches the modal id so closeModal can find it
+    overlay.id = modal.id + 'Overlay';
+    overlay.onclick = () => appCloseModal(modal.id);
     document.body.appendChild(overlay);
     overlay.classList.add('active');
 }
@@ -1461,7 +1565,7 @@ function saveNewPassword() {
     }
     
     // Close modal
-    closeModal('changePasswordModal');
+    appCloseModal('changePasswordModal');
     
     // Simulate password change (in real app, this would call an API)
     setTimeout(() => {
@@ -1551,17 +1655,45 @@ function exportUserDataPDF() {
     }, 1000);
 }
 
-// Close modal
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.remove();
+// Close modal (robust)
+function appCloseModal(modalId) {
+    console.debug('[appCloseModal] called for:', modalId);
+    // If no modalId provided, attempt to close the most recent modal-like element
+    let modal = null;
+    if (modalId) {
+        modal = document.getElementById(modalId);
+    } else {
+        // support common modal patterns across files
+        modal = document.querySelector('.modal.active') || document.querySelector('.modal') || document.querySelector('.modal-overlay') || document.querySelector('.market-modal');
     }
-    
-    // Remove overlay
-    const overlay = document.getElementById(modalId + 'Overlay');
-    if (overlay) {
-        overlay.remove();
+
+    if (modal) {
+        // If modal uses active class (static in DOM), toggle it; otherwise remove it
+        if (modal.classList && modal.classList.contains('active')) {
+            modal.classList.remove('active');
+        } else {
+            // Remove if it's a dynamically created DOM node
+            modal.remove();
+        }
+    }
+
+    // Remove overlay matching modal id patterns but DO NOT remove the static modalOverlay global element
+    const overlayIds = [];
+    if (modal && modal.id) {
+        overlayIds.push(modal.id + 'Overlay');
+        overlayIds.push(modal.id.replace(/Modal$/, '') + 'Overlay');
+    }
+
+    overlayIds.forEach(id => {
+        const o = document.getElementById(id);
+        if (o && o.id !== 'modalOverlay') o.remove();
+    });
+
+    // If no modal was found but a dynamically-added overlay exists (not the static one), remove the last such overlay
+    const dynamicOverlays = Array.from(document.querySelectorAll('.modal-overlay')).filter(o => o.id && o.id !== 'modalOverlay');
+    if (!modal && dynamicOverlays.length > 0) {
+        const last = dynamicOverlays[dynamicOverlays.length - 1];
+        if (last) last.remove();
     }
 }
 
@@ -1676,7 +1808,9 @@ function formatTimeAgo(timestamp) {
 // Apply filters (for search section)
 function applyFilters() {
     const keyword = document.getElementById('advancedKeyword').value.trim();
-    const region = document.getElementById('regionFilter').value;
+    // Get region from the search filters dropdown
+    const regionFilter = document.getElementById('regionFilter');
+    const region = regionFilter ? regionFilter.value : activeRegion;
     const timeRange = document.getElementById('timeFilter').value;
     
     if (!keyword) {
@@ -1778,7 +1912,7 @@ function viewMarketDetails(marketName) {
             <div class="modal-content">
                 <div class="modal-header">
                     <h2>${market.name}</h2>
-                    <button class="modal-close" onclick="closeModal('marketDetailsModal')">
+                    <button class="modal-close" onclick="appCloseModal('marketDetailsModal')">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1819,8 +1953,8 @@ function viewMarketDetails(marketName) {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeModal('marketDetailsModal')">Close</button>
-                    <button class="btn btn-primary" onclick="analyzeMarket('${market.name}'); closeModal('marketDetailsModal')">
+                    <button class="btn btn-secondary" onclick="appCloseModal('marketDetailsModal')">Close</button>
+                    <button class="btn btn-primary" onclick="analyzeMarket('${market.name}'); appCloseModal('marketDetailsModal')">
                         <i class="fas fa-chart-line"></i> Analyze Market Products
                     </button>
                 </div>
@@ -1834,7 +1968,7 @@ function viewMarketDetails(marketName) {
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         overlay.id = 'marketDetailsOverlay';
-        overlay.onclick = () => closeModal('marketDetailsModal');
+        overlay.onclick = () => appCloseModal('marketDetailsModal');
         document.body.appendChild(overlay);
         overlay.classList.add('active');
     }
@@ -1898,12 +2032,29 @@ function updateProfileAvatars() {
     if (modalAvatar && profilePicture) {
         modalAvatar.innerHTML = `<img src="${profilePicture}" alt="Profile">`;
     }
+    
+    // Update header profile icon button
+    const headerProfileButtons = document.querySelectorAll('.header-profile button.header-icon-btn');
+    if (headerProfileButtons && headerProfileButtons.length > 0 && profilePicture) {
+        // Update the first button (profile icon) only
+        const profileBtn = headerProfileButtons[0];
+        profileBtn.innerHTML = `<img src="${profilePicture}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+    }
 }
 
 // Upload Profile Picture
 function uploadProfilePicture() {
-    const fileInput = document.getElementById('profilePictureInput');
-    fileInput.click();
+    // Check if we're in the modal or main profile section
+    const modal = document.getElementById('profileModal');
+    const isModalActive = modal && modal.classList.contains('active');
+    
+    const fileInput = isModalActive 
+        ? document.getElementById('profilePictureInputModal') 
+        : document.getElementById('profilePictureInput');
+    
+    if (fileInput) {
+        fileInput.click();
+    }
 }
 
 // Open Profile Modal
@@ -1921,6 +2072,9 @@ function openProfileModal() {
     document.getElementById('modalProfileEmail').textContent = userEmail;
     document.getElementById('modalMemberSince').textContent = new Date(memberSince).toLocaleDateString();
     document.getElementById('modalSearchCount').textContent = searchHistory.length;
+    const userBio = localStorage.getItem('user_bio') || '';
+    const modalBioEl = document.getElementById('modalProfileBio');
+    if (modalBioEl) modalBioEl.textContent = userBio || '—';
     
     // Load profile picture
     const profilePicture = localStorage.getItem('profile_picture');
@@ -1936,8 +2090,18 @@ function openProfileModal() {
 function closeProfileModal() {
     const modal = document.getElementById('profileModal');
     const overlay = document.getElementById('modalOverlay');
-    modal.classList.remove('active');
-    overlay.classList.remove('active');
+    if (modal) {
+        if (modal.classList && modal.classList.contains('active')) modal.classList.remove('active');
+        else modal.remove();
+    }
+
+    if (overlay) {
+        overlay.classList.remove('active');
+    } else {
+        // Remove any dynamic overlay if static one is missing
+        const dyn = Array.from(document.querySelectorAll('.modal-overlay')).filter(o => o.id && o.id !== 'modalOverlay');
+        if (dyn.length > 0) dyn[dyn.length - 1].remove();
+    }
 }
 
 function openContactsModal() {
@@ -1951,8 +2115,17 @@ function openContactsModal() {
 function closeContactsModal() {
     const modal = document.getElementById('contactsModal');
     const overlay = document.getElementById('modalOverlay');
-    modal.classList.remove('active');
-    overlay.classList.remove('active');
+    if (modal) {
+        if (modal.classList && modal.classList.contains('active')) modal.classList.remove('active');
+        else modal.remove();
+    }
+
+    if (overlay) {
+        overlay.classList.remove('active');
+    } else {
+        const dyn = Array.from(document.querySelectorAll('.modal-overlay')).filter(o => o.id && o.id !== 'modalOverlay');
+        if (dyn.length > 0) dyn[dyn.length - 1].remove();
+    }
 }
 
 function closeAllModals() {
@@ -2033,7 +2206,7 @@ window.saveEditProfile = saveEditProfile;
 window.changePassword = changePassword;
 window.saveNewPassword = saveNewPassword;
 window.exportUserDataPDF = exportUserDataPDF;
-window.closeModal = closeModal;
+window.appCloseModal = appCloseModal;
 window.uploadProfilePicture = uploadProfilePicture;
 window.handleProfilePictureUpload = handleProfilePictureUpload;
 window.openProfileModal = openProfileModal;

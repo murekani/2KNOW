@@ -27,17 +27,16 @@ console.log(`🔌 API Configuration loaded: ${API_URL}`);
 
 // For debugging
 console.log('🔌 API Configuration Loaded:', {
-  baseUrl: API_CONFIG.API_BASE_URL || 'current origin',
-  fullHealthUrl: getApiUrl('health'),
+  baseUrl: API_URL,
   hostname: window.location.hostname,
   protocol: window.location.protocol
 });
 
 // Make available globally
-window.API_CONFIG = API_CONFIG;
+window.API_URL = API_URL;
 window.getApiUrl = getApiUrl;
 
 // Export for Node.js modules (if needed)
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { API_CONFIG, getApiUrl };
+  module.exports = { API_URL, getApiUrl };
 }
