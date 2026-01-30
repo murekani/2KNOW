@@ -44,6 +44,3 @@ npm-debug.log
 
 # Logs
 *.log
-
-*.db
-backend/*.db
