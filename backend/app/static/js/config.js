@@ -16,7 +16,7 @@ function getApiUrl() {
     }
 
     // Local development
-    return 'http://127.0.0.1:8000';
+   return '';
 }
 
 // Export API URL constant
